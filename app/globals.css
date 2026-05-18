@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-white/10;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-ink text-mist-100 antialiased;
+    font-family:
+      "Inter Tight",
+      "Segoe UI Variable",
+      "Avenir Next",
+      "SF Pro Display",
+      sans-serif;
+    background-image:
+      radial-gradient(circle at 8% 0%, rgba(239, 90, 76, 0.18), transparent 28%),
+      radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.05), transparent 20%),
+      linear-gradient(180deg, #040506 0%, #090b0d 100%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family:
+      "Inter Tight",
+      "Space Grotesk",
+      "Segoe UI Variable",
+      "Avenir Next",
+      sans-serif;
+  }
+
+  ::selection {
+    background: rgba(239, 90, 76, 0.35);
+    color: #f9f7f4;
+  }
+}
+
+@layer utilities {
+  .surface {
+    @apply rounded-[28px] border border-white/8 bg-white/[0.04] shadow-card backdrop-blur-xl;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

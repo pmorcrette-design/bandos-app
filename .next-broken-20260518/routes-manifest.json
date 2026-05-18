@@ -1,0 +1,158 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/app/shows/[showId]",
+      "regex": "^/app/shows/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPshowId": "nxtPshowId"
+      },
+      "namedRegex": "^/app/shows/(?<nxtPshowId>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/app",
+      "regex": "^/app(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app(?:/)?$"
+    },
+    {
+      "page": "/app/booking-crm",
+      "regex": "^/app/booking\\-crm(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/booking\\-crm(?:/)?$"
+    },
+    {
+      "page": "/app/documents",
+      "regex": "^/app/documents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/documents(?:/)?$"
+    },
+    {
+      "page": "/app/epk",
+      "regex": "^/app/epk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/epk(?:/)?$"
+    },
+    {
+      "page": "/app/finance",
+      "regex": "^/app/finance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/finance(?:/)?$"
+    },
+    {
+      "page": "/app/merch",
+      "regex": "^/app/merch(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/merch(?:/)?$"
+    },
+    {
+      "page": "/app/settings",
+      "regex": "^/app/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/settings(?:/)?$"
+    },
+    {
+      "page": "/app/shows",
+      "regex": "^/app/shows(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/shows(?:/)?$"
+    },
+    {
+      "page": "/app/tasks",
+      "regex": "^/app/tasks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/tasks(?:/)?$"
+    },
+    {
+      "page": "/app/team",
+      "regex": "^/app/team(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/team(?:/)?$"
+    },
+    {
+      "page": "/app/tour-services",
+      "regex": "^/app/tour\\-services(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/tour\\-services(?:/)?$"
+    },
+    {
+      "page": "/app/tours",
+      "regex": "^/app/tours(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/app/tours(?:/)?$"
+    },
+    {
+      "page": "/auth/sign-in",
+      "regex": "^/auth/sign\\-in(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/sign\\-in(?:/)?$"
+    },
+    {
+      "page": "/auth/sign-up",
+      "regex": "^/auth/sign\\-up(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/sign\\-up(?:/)?$"
+    },
+    {
+      "page": "/demo",
+      "regex": "^/demo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/demo(?:/)?$"
+    },
+    {
+      "page": "/onboarding",
+      "regex": "^/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/onboarding(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

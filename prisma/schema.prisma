@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ShowStatus {
+  BOOKED
+  PENDING
+  CANCELLED
+  LOCAL_SUPPORT_NEEDED
+}
+
+enum CrmStatus {
+  NOT_CONTACTED
+  CONTACTED
+  REPLIED
+  NEGOTIATING
+  CONFIRMED
+  REJECTED
+}
+
+enum FinanceEntryType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String
+  passwordHash String?
+  image       String?
+  memberships Membership[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Workspace {
+  id            String           @id @default(cuid())
+  name          String
+  genre         String
+  country       String
+  logoUrl       String?
+  members       Membership[]
+  tours         Tour[]
+  shows         Show[]
+  crmContacts   CrmContact[]
+  financeEntries FinanceEntry[]
+  merchProducts MerchProduct[]
+  documents     WorkspaceDocument[]
+  tasks         Task[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Membership {
+  id          String        @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        WorkspaceRole
+  title       String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Tour {
+  id              String             @id @default(cuid())
+  workspaceId     String
+  name            String
+  region          String
+  startDate       DateTime
+  endDate         DateTime
+  driverName      String?
+  vanName         String?
+  routeDistanceKm Int                @default(0)
+  estimatedFuel   Int                @default(0)
+  estimatedTolls  Int                @default(0)
+  estimatedHotels Int                @default(0)
+  shows           Show[]
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Show {
+  id              String      @id @default(cuid())
+  workspaceId     String
+  tourId          String?
+  venueName       String
+  city            String
+  country         String
+  date            DateTime
+  status          ShowStatus
+  promoterName    String
+  address         String
+  loadIn          String?
+  soundcheck      String?
+  setTime         String?
+  curfew          String?
+  guarantee       Int?
+  dealLabel       String?
+  notes           String?
+  tour            Tour?       @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documents       WorkspaceDocument[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model CrmContact {
+  id              String      @id @default(cuid())
+  workspaceId     String
+  kind            String
+  companyName     String
+  city            String
+  country         String
+  email           String
+  phone           String?
+  instagram       String?
+  capacity        Int?
+  status          CrmStatus
+  notes           String?
+  lastContactAt   DateTime?
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model FinanceEntry {
+  id            String           @id @default(cuid())
+  workspaceId   String
+  type          FinanceEntryType
+  category      String
+  label         String
+  amount        Int
+  currency      String           @default("GBP")
+  incurredAt    DateTime
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model MerchProduct {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  name          String
+  category      String
+  price         Int
+  sku           String
+  totalStock    Int
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model WorkspaceDocument {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  showId        String?
+  category      String
+  name          String
+  fileUrl       String
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  show          Show?        @relation(fields: [showId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  title         String
+  description   String?
+  priority      String
+  assigneeName  String
+  dueAt         DateTime?
+  status        String
+  commentsCount Int          @default(0)
+  attachmentsCount Int       @default(0)
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}

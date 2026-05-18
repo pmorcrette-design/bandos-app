@@ -1,0 +1,97 @@
+{
+  "node": {
+    "00b8420f948c8d7fc77cbc22a4ec02b4311213e292": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "signInWithGoogleAction"
+    },
+    "00ef44cbcbccf87258fd96cafac9d428aa7654040e": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "signOutAction"
+    },
+    "401022cb4dd61ed3a101509b5cb228eb861b6abb02": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "setLocalePreferenceAction"
+    },
+    "402cd795da6649af8a35c4f99c43d1368b347f1edc": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "signUpAction"
+    },
+    "404db51dcfb46de06c6c8e86d2147716d7137aaa4d": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "setCurrencyPreferenceAction"
+    },
+    "404e80ac4c95faee11bc3c0890b5430259eb7bc779": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "signInAction"
+    },
+    "40fd1ca1581b3d46a788ae583c52d53bef0f10e029": {
+      "workers": {
+        "app/app/tour-services/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2FUsers%2Fpierre%2FDocuments%2FNew%20project%203%2Fapp%2Factions.ts%22%2C%5B%7B%22id%22%3A%2200b8420f948c8d7fc77cbc22a4ec02b4311213e292%22%2C%22exportedName%22%3A%22signInWithGoogleAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2200ef44cbcbccf87258fd96cafac9d428aa7654040e%22%2C%22exportedName%22%3A%22signOutAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22401022cb4dd61ed3a101509b5cb228eb861b6abb02%22%2C%22exportedName%22%3A%22setLocalePreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22402cd795da6649af8a35c4f99c43d1368b347f1edc%22%2C%22exportedName%22%3A%22signUpAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404db51dcfb46de06c6c8e86d2147716d7137aaa4d%22%2C%22exportedName%22%3A%22setCurrencyPreferenceAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%22404e80ac4c95faee11bc3c0890b5430259eb7bc779%22%2C%22exportedName%22%3A%22signInAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%2C%7B%22id%22%3A%2240fd1ca1581b3d46a788ae583c52d53bef0f10e029%22%2C%22exportedName%22%3A%22completeOnboardingAction%22%2C%22filename%22%3A%22app%2Factions.ts%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/app/tour-services/page": "action-browser"
+      },
+      "filename": "app/actions.ts",
+      "exportedName": "completeOnboardingAction"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "pShZZSrn/kIrjw0zhYH6qeUDm6yQsODOIJp+DWq4kXY="
+}
