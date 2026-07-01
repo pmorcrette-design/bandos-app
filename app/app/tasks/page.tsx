@@ -12,13 +12,13 @@ export default async function TasksPage() {
         eyebrow={t(locale, "Tâches", "Tasks")}
         title={t(
           locale,
-          "Coordonne l'équipe avec des tâches opérationnelles visibles",
-          "Coordinate the crew with visible operational work"
+          "Pilote l'équipe avec un kanban opérationnel",
+          "Run the crew from one operational kanban"
         )}
         description={t(
           locale,
-          "Crée des tâches avec assigné, échéance, priorité, commentaires et pièces jointes, puis consulte-les en liste, kanban ou calendrier.",
-          "Create tasks with assignee, deadline, priority, comments, and attachments, then review them in list, kanban, or calendar views."
+          "Ajoute, déplace, édite et supprime les tâches directement dans le kanban du workspace, sans autre vue ni reset de ton organisation.",
+          "Add, move, edit, and delete tasks directly in the workspace kanban, with no extra views and no reset of your setup."
         )}
       />
       <TasksView locale={locale} />

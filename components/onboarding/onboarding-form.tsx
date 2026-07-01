@@ -23,22 +23,20 @@ const bandRoles = [
 ] as const;
 
 export function OnboardingForm({
-  locale
+  locale,
+  initialWorkspaceName
 }: {
   locale: Locale;
+  initialWorkspaceName: string;
 }) {
   const [step, setStep] = useState(0);
-  const [members, setMembers] = useState([
-    { name: "Widespread Disease", role: "vocalist" },
-    { name: "Mae Hollow", role: "tour manager" },
-    { name: "Dani Croft", role: "merch seller" }
-  ]);
-  const [bandName, setBandName] = useState("WIDESPREAD DISEASE");
-  const [genre, setGenre] = useState("Metalcore");
-  const [country, setCountry] = useState("France");
-  const [tourName, setTourName] = useState("Northbound Ruin 2026");
-  const [tourStart, setTourStart] = useState("London");
-  const [logo, setLogo] = useState("/widespread-disease-logo.jpg");
+  const [members, setMembers] = useState([{ name: "", role: "vocalist" }]);
+  const [bandName, setBandName] = useState(initialWorkspaceName);
+  const [genre, setGenre] = useState("");
+  const [country, setCountry] = useState("");
+  const [tourName, setTourName] = useState("");
+  const [tourStart, setTourStart] = useState("");
+  const [logo, setLogo] = useState("/bandos-mark.svg");
 
   const progress = useMemo(() => ((step + 1) / 3) * 100, [step]);
 
@@ -156,7 +154,7 @@ export function OnboardingForm({
                   value={member.role}
                   onChange={(event) =>
                     setMembers((current) =>
-                      current.map((entry, entryIndex) =>
+                  current.map((entry, entryIndex) =>
                         entryIndex === index
                           ? { ...entry, role: event.target.value }
                           : entry
@@ -179,7 +177,7 @@ export function OnboardingForm({
               onClick={() =>
                 setMembers((current) => [
                   ...current,
-                  { name: t(locale, "Nouveau membre", "New member"), role: "guitarist" }
+                  { name: "", role: "guitarist" }
                 ])
               }
             >

@@ -11,9 +11,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { t, type Locale } from "@/lib/i18n";
+import { getTourCalendarDayCount } from "@/lib/shows";
 import { formatCurrency, type SupportedCurrency } from "@/lib/utils";
 import {
   useBandosUIStore,
+  type TourVehicleAssignment,
   type VehicleCatalogItem
 } from "@/store/ui-store";
 
@@ -75,6 +77,8 @@ export function TourServicesView({
   locale: Locale;
 }) {
   const vehicleCatalog = useBandosUIStore((state) => state.vehicleCatalog);
+  const importedShowFolders = useBandosUIStore((state) => state.importedShowFolders);
+  const tourVehicleAssignments = useBandosUIStore((state) => state.tourVehicleAssignments);
   const addVehicleCatalogItem = useBandosUIStore(
     (state) => state.addVehicleCatalogItem
   );
@@ -83,6 +87,10 @@ export function TourServicesView({
   );
   const deleteVehicleCatalogItem = useBandosUIStore(
     (state) => state.deleteVehicleCatalogItem
+  );
+  const assignVehicleToTour = useBandosUIStore((state) => state.assignVehicleToTour);
+  const clearTourVehicleAssignment = useBandosUIStore(
+    (state) => state.clearTourVehicleAssignment
   );
 
   const [query, setQuery] = useState("");
@@ -105,11 +113,51 @@ export function TourServicesView({
   const [tags, setTags] = useState(emptyDraft.tags);
   const [vehiclePhotos, setVehiclePhotos] = useState<string[]>(emptyDraft.vehiclePhotos);
   const [saveMessage, setSaveMessage] = useState("");
+  const [tourAssignmentDraft, setTourAssignmentDraft] = useState("");
 
   const deferredQuery = useDeferredValue(query);
   const selectedVehicle =
     vehicleCatalog.find((item) => item.id === selectedVehicleId) ?? null;
   const modalOpen = isCreating || Boolean(selectedVehicle);
+  const assignmentByTour = useMemo(
+    () => new Map(tourVehicleAssignments.map((assignment) => [assignment.tourName, assignment])),
+    [tourVehicleAssignments]
+  );
+  const tourOptions = useMemo(() => {
+    const groupedTours = Array.from(
+      importedShowFolders
+        .filter((folder) => !folder.isStandalone)
+        .reduce((map, folder) => {
+          const current = map.get(folder.tourName) ?? [];
+          current.push(folder);
+          map.set(folder.tourName, current);
+          return map;
+        }, new Map<string, typeof importedShowFolders>())
+    )
+      .map(([tourName, folders]) => ({
+        tourName,
+        folders,
+        firstDate: folders[0]?.date ?? "",
+        showCount: folders.length,
+        calendarDays: getTourCalendarDayCount(folders)
+      }))
+      .sort((left, right) => left.firstDate.localeCompare(right.firstDate));
+
+    return groupedTours;
+  }, [importedShowFolders]);
+  const selectedVehicleAssignments = useMemo(
+    () =>
+      selectedVehicle
+        ? tourVehicleAssignments
+            .filter((assignment) => assignment.vehicleId === selectedVehicle.id)
+            .sort((left, right) => left.tourName.localeCompare(right.tourName))
+        : [],
+    [selectedVehicle, tourVehicleAssignments]
+  );
+  const selectedAssignmentTour = useMemo(
+    () => tourOptions.find((tour) => tour.tourName === tourAssignmentDraft) ?? null,
+    [tourAssignmentDraft, tourOptions]
+  );
 
   const filteredVehicles = useMemo(() => {
     const search = deferredQuery.trim().toLowerCase();
@@ -156,6 +204,7 @@ export function TourServicesView({
       setNotes(emptyDraft.notes);
       setTags(emptyDraft.tags);
       setVehiclePhotos(emptyDraft.vehiclePhotos);
+      setTourAssignmentDraft("");
       setSaveMessage("");
       return;
     }
@@ -183,6 +232,7 @@ export function TourServicesView({
     setNotes(selectedVehicle.notes);
     setTags(selectedVehicle.tags.join(", "));
     setVehiclePhotos(selectedVehicle.vehiclePhotos);
+    setTourAssignmentDraft("");
     setSaveMessage("");
   }, [isCreating, selectedVehicle]);
 
@@ -240,6 +290,56 @@ export function TourServicesView({
 
     deleteVehicleCatalogItem(selectedVehicle.id);
     closeModal();
+  }
+
+  function assignSelectedVehicleToTour() {
+    if (!selectedVehicle || !tourAssignmentDraft) {
+      return;
+    }
+
+    const existingAssignment = assignmentByTour.get(tourAssignmentDraft) ?? null;
+
+    assignVehicleToTour({
+      tourName: tourAssignmentDraft,
+      vehicleId: selectedVehicle.id
+    });
+
+    if (existingAssignment?.vehicleId === selectedVehicle.id) {
+      setSaveMessage(
+        t(
+          locale,
+          `${selectedVehicle.name} est déjà assigné à ${tourAssignmentDraft}.`,
+          `${selectedVehicle.name} is already assigned to ${tourAssignmentDraft}.`
+        )
+      );
+      return;
+    }
+
+    setSaveMessage(
+      existingAssignment
+        ? t(
+            locale,
+            `${selectedVehicle.name} remplace l'ancien véhicule sur ${tourAssignmentDraft}.`,
+            `${selectedVehicle.name} replaces the previous vehicle on ${tourAssignmentDraft}.`
+          )
+        : t(
+            locale,
+            `${selectedVehicle.name} assigné à ${tourAssignmentDraft}.`,
+            `${selectedVehicle.name} assigned to ${tourAssignmentDraft}.`
+          )
+    );
+    setTourAssignmentDraft("");
+  }
+
+  function removeTourAssignment(assignment: TourVehicleAssignment) {
+    clearTourVehicleAssignment(assignment.tourName);
+    setSaveMessage(
+      t(
+        locale,
+        `Assignation retirée de ${assignment.tourName}.`,
+        `Assignment removed from ${assignment.tourName}.`
+      )
+    );
   }
 
   async function handleVehiclePhotosUpload(
@@ -332,6 +432,23 @@ export function TourServicesView({
                     <p className="mt-1 truncate text-sm text-mist-300">
                       {item.contact || item.website || "—"}
                     </p>
+                    {tourVehicleAssignments.some((assignment) => assignment.vehicleId === item.id) ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {tourVehicleAssignments
+                          .filter((assignment) => assignment.vehicleId === item.id)
+                          .slice(0, 2)
+                          .map((assignment) => (
+                            <Badge key={assignment.id}>
+                              {assignment.tourName}
+                            </Badge>
+                          ))}
+                        {tourVehicleAssignments.filter((assignment) => assignment.vehicleId === item.id).length > 2 ? (
+                          <Badge>
+                            +{tourVehicleAssignments.filter((assignment) => assignment.vehicleId === item.id).length - 2}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm lg:contents">
                     <div className="min-w-[120px]">
@@ -645,6 +762,132 @@ export function TourServicesView({
               {formatCurrency(parseOptionalNumber(estimatedDailyPrice) ?? 0, currency, "GBP")}
             </p>
           </div>
+
+          {!isCreating && selectedVehicle ? (
+            <div className="space-y-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+              <div>
+                <p className="text-sm font-medium text-mist-50">
+                  {t(locale, "Assigner à une tournée", "Assign to a tour")}
+                </p>
+                <p className="mt-1 text-sm text-mist-300">
+                  {t(
+                    locale,
+                    "Le prix journalier sera ajouté automatiquement aux coûts de la tournée sur sa durée totale.",
+                    "The daily rate will automatically be added to the tour costs across its full duration."
+                  )}
+                </p>
+              </div>
+
+              {tourOptions.length ? (
+                <>
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <select
+                      value={tourAssignmentDraft}
+                      onChange={(event) => setTourAssignmentDraft(event.target.value)}
+                      className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
+                    >
+                      <option value="" className="bg-graphite-900">
+                        {t(locale, "Choisir une tournée", "Choose a tour")}
+                      </option>
+                      {tourOptions.map((tour) => (
+                        <option key={tour.tourName} value={tour.tourName} className="bg-graphite-900">
+                          {tour.tourName}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      onClick={assignSelectedVehicleToTour}
+                      disabled={!tourAssignmentDraft}
+                    >
+                      {t(locale, "Assigner", "Assign")}
+                    </Button>
+                  </div>
+
+                  {selectedAssignmentTour ? (
+                    <div className="rounded-[20px] border border-white/8 bg-black/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-mist-300">
+                        {t(locale, "Prévision de coût", "Cost preview")}
+                      </p>
+                      <p className="mt-2 text-sm text-mist-50">
+                        {selectedAssignmentTour.tourName}
+                      </p>
+                      <p className="mt-1 text-sm text-mist-300">
+                        {selectedAssignmentTour.showCount} {t(locale, "date(s)", "show(s)")} •{" "}
+                        {selectedAssignmentTour.calendarDays} {t(locale, "jour(s) facturés", "billable day(s)")}
+                      </p>
+                      <p className="mt-2 text-base font-medium text-mist-50">
+                        {formatCurrency(
+                          selectedVehicle.estimatedDailyPrice * selectedAssignmentTour.calendarDays,
+                          currency,
+                          "GBP"
+                        )}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-3">
+                    <p className="text-xs uppercase tracking-[0.22em] text-mist-300">
+                      {t(locale, "Tournées assignées", "Assigned tours")}
+                    </p>
+                    {selectedVehicleAssignments.length ? (
+                      selectedVehicleAssignments.map((assignment) => {
+                        const assignedTour = tourOptions.find(
+                          (tour) => tour.tourName === assignment.tourName
+                        );
+                        const assignedCost = assignedTour
+                          ? selectedVehicle.estimatedDailyPrice * assignedTour.calendarDays
+                          : 0;
+
+                        return (
+                          <div
+                            key={assignment.id}
+                            className="flex flex-col gap-3 rounded-[20px] border border-white/8 bg-black/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-mist-50">
+                                {assignment.tourName}
+                              </p>
+                              <p className="mt-1 text-sm text-mist-300">
+                                {assignedTour
+                                  ? `${assignedTour.calendarDays} ${t(locale, "jour(s)", "day(s)")} • ${formatCurrency(assignedCost, currency, "GBP")}`
+                                  : t(locale, "Tournée non trouvée", "Tour not found")}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => removeTourAssignment(assignment)}
+                              className="border-red-400/20 bg-red-500/10 text-red-100 hover:bg-red-500/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {t(locale, "Retirer", "Remove")}
+                            </Button>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-mist-300">
+                        {t(
+                          locale,
+                          "Ce véhicule n'est assigné à aucune tournée.",
+                          "This vehicle is not assigned to any tour."
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-mist-300">
+                  {t(
+                    locale,
+                    "Importe d'abord une tournée pour pouvoir y assigner un van.",
+                    "Import a tour first to assign a vehicle to it."
+                  )}
+                </p>
+              )}
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {!isCreating ? (

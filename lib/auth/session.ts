@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 
 import { normalizeCurrency, type SupportedCurrency } from "@/lib/utils";
 import {
+  isBandosPlatformAdminEmail,
+  isDemoWorkspaceId,
   getWorkspaceById,
   getWorkspaceUserById
 } from "@/lib/server/workspace-store";
@@ -16,6 +18,8 @@ export type SessionUser = {
   logo: string;
   currency: SupportedCurrency;
   onboarded: boolean;
+  isBandosAdmin: boolean;
+  isDemoWorkspace: boolean;
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -46,7 +50,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
           workspace: workspace.name,
           logo: workspace.logoUrl,
           currency: workspace.currency,
-          onboarded: workspace.onboarded
+          onboarded: workspace.onboarded,
+          isBandosAdmin:
+            Boolean(user.isBandosAdmin) || isBandosPlatformAdminEmail(user.email),
+          isDemoWorkspace: isDemoWorkspaceId(workspace.id)
         };
       }
     } catch {
@@ -65,20 +72,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     workspaceId: workspaceId ?? "legacy-workspace",
     name: isLegacyWorkspace
       ? "WIDESPREAD DISEASE"
-      : rawName ?? "WIDESPREAD DISEASE",
+      : rawName ?? "Workspace owner",
     email: isLegacyWorkspace
       ? "ops@widespreaddisease.com"
-      : rawEmail ?? "ops@widespreaddisease.com",
+      : rawEmail ?? "owner@bandos.online",
     role:
       (cookieStore.get("bandos_role")?.value as SessionUser["role"] | undefined) ??
       "owner",
     workspace: isLegacyWorkspace
       ? "WIDESPREAD DISEASE"
-      : rawWorkspace ?? "WIDESPREAD DISEASE",
+      : rawWorkspace ?? "New workspace",
     logo:
       cookieStore.get("bandos_logo")?.value ??
-      "/widespread-disease-logo.jpg",
+      "/bandos-mark.svg",
     currency: normalizeCurrency(cookieStore.get("bandos_currency")?.value),
-    onboarded: cookieStore.get("bandos_onboarded")?.value === "1"
+    onboarded: cookieStore.get("bandos_onboarded")?.value === "1",
+    isBandosAdmin: isBandosPlatformAdminEmail(
+      isLegacyWorkspace ? "ops@widespreaddisease.com" : rawEmail ?? ""
+    ),
+    isDemoWorkspace: isLegacyWorkspace || isDemoWorkspaceId(workspaceId ?? "legacy-workspace")
   };
 }

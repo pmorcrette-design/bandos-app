@@ -24,7 +24,10 @@ export function Sidebar({
   const navigationItems = getNavigationItems(locale);
 
   return (
-    <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-[272px] shrink-0 flex-col rounded-[30px] border border-white/8 bg-black/30 p-5 shadow-shell backdrop-blur-2xl lg:flex">
+    <aside
+      data-shell-sidebar="true"
+      className="sticky top-4 hidden h-[calc(100vh-2rem)] w-[272px] shrink-0 overflow-hidden rounded-[30px] border border-white/8 bg-black/30 p-5 shadow-shell backdrop-blur-2xl lg:flex lg:flex-col"
+    >
       <BandosLogo />
       <div className="mt-8 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
         <div className="flex items-center justify-between gap-3">
@@ -46,36 +49,40 @@ export function Sidebar({
           {t(locale, "Workspace tournée", "Touring workspace")}
         </Badge>
       </div>
-      <nav className="mt-6 space-y-1.5">
-        {navigationItems.map((item) => {
-          const isActive =
-            item.href === "/app"
-              ? pathname === item.href
-              : pathname.startsWith(item.href);
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-y-contain pr-1 pb-6">
+        <nav className="space-y-1.5">
+          {navigationItems.map((item) => {
+            const isActive =
+              item.href === "/app"
+                ? pathname === item.href
+                : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group flex items-center justify-between rounded-2xl px-4 py-3 text-sm transition",
-                isActive
-                  ? "border border-coral-500/20 bg-coral-500/10 text-mist-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-                  : "text-mist-300 hover:bg-white/[0.04] hover:text-mist-50"
-              )}
-            >
-              <span className="flex items-center gap-3">
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </span>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-mist-300/70">
-                {item.shortcut}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-auto rounded-[24px] border border-white/8 bg-gradient-to-br from-white/[0.05] to-coral-500/10 p-4">
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "group flex items-center justify-between rounded-2xl px-4 py-3 text-sm transition",
+                  isActive
+                    ? "border border-coral-500/20 bg-coral-500/10 text-mist-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                    : "text-mist-300 hover:bg-white/[0.04] hover:text-mist-50"
+                )}
+              >
+                <span className="flex items-center gap-3">
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </span>
+                <span className="text-[11px] uppercase tracking-[0.2em] text-mist-300/70">
+                  {item.shortcut}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+      </div>
+
+      <div className="mt-6 rounded-[24px] border border-white/8 bg-gradient-to-br from-white/[0.05] to-coral-500/10 p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25">
             <Sparkles className="h-5 w-5 text-coral-300" />
@@ -83,7 +90,11 @@ export function Sidebar({
           <div>
             <p className="text-sm font-medium text-mist-50">BandOS Pulse</p>
             <p className="text-sm text-mist-300">
-              {t(locale, "6 confirmations encore ouvertes", "6 confirmations still open")}
+              {t(
+                locale,
+                "Le workspace reste synchronisé automatiquement.",
+                "Your workspace stays synced automatically."
+              )}
             </p>
           </div>
         </div>

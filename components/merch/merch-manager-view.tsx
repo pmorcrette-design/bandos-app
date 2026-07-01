@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Package2, Plus, Trash2, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  Package2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  TrendingUp
+} from "lucide-react";
 
 import { SumUpConnectionCard } from "@/components/integrations/sumup-connection-card";
 import { Badge } from "@/components/ui/badge";
@@ -36,8 +43,14 @@ export function MerchManagerView({
 }) {
   const merchCatalog = useBandosUIStore((state) => state.merchCatalog);
   const addMerchProduct = useBandosUIStore((state) => state.addMerchProduct);
+  const importMerchProductsFromSumUp = useBandosUIStore(
+    (state) => state.importMerchProductsFromSumUp
+  );
   const updateMerchProduct = useBandosUIStore((state) => state.updateMerchProduct);
   const deleteMerchProduct = useBandosUIStore((state) => state.deleteMerchProduct);
+  const [isImportingCatalog, setIsImportingCatalog] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
+  const [importError, setImportError] = useState("");
   const [newProduct, setNewProduct] = useState({
     name: "",
     sku: "",
@@ -101,6 +114,66 @@ export function MerchManagerView({
       salePrice: "15",
       reorderPoint: "8"
     });
+  }
+
+  async function importCatalogFromSumUp() {
+    setIsImportingCatalog(true);
+    setImportMessage("");
+    setImportError("");
+
+    try {
+      const response = await fetch("/api/integrations/sumup/catalog", {
+        method: "GET",
+        cache: "no-store"
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            error?: string;
+            count?: number;
+            items?: Array<{
+              name: string;
+              quantitySold: number;
+              salePrice: number;
+              revenue: number;
+            }>;
+          }
+        | null;
+
+      if (!response.ok || !payload?.ok || !payload.items) {
+        setImportError(
+          payload?.error ||
+            t(
+              locale,
+              "Impossible d'importer le catalogue SumUp.",
+              "Unable to import the SumUp catalog."
+            )
+        );
+        return;
+      }
+
+      const result = importMerchProductsFromSumUp(payload.items);
+
+      setImportMessage(
+        t(
+          locale,
+          `${result.created} article(s) créé(s), ${result.updated} article(s) mis à jour depuis SumUp.`,
+          `${result.created} item(s) created, ${result.updated} item(s) updated from SumUp.`
+        )
+      );
+    } catch (error) {
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : t(
+              locale,
+              "Erreur d'import SumUp.",
+              "SumUp import error."
+            )
+      );
+    } finally {
+      setIsImportingCatalog(false);
+    }
   }
 
   return (
@@ -235,6 +308,46 @@ export function MerchManagerView({
 
         <div className="space-y-4">
           <SumUpConnectionCard locale={locale} status={sumupStatus} compact />
+          <Card>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-lg font-medium text-mist-50">
+                  {t(locale, "Import catalogue SumUp", "Import SumUp catalog")}
+                </p>
+                <p className="mt-2 text-sm text-mist-300">
+                  {t(
+                    locale,
+                    "Crée ou complète les articles merch à partir des produits vus dans les transactions SumUp. Le stock reste manuel dans BandOS.",
+                    "Create or enrich merch items from products seen in SumUp transactions. Stock remains manual in BandOS."
+                  )}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={sumupStatus.connected ? "primary" : "secondary"}
+                onClick={importCatalogFromSumUp}
+                disabled={!sumupStatus.connected || isImportingCatalog}
+                className="min-w-[188px] shrink-0 self-start whitespace-nowrap lg:self-auto"
+              >
+                <RefreshCw className={`h-4 w-4 ${isImportingCatalog ? "animate-spin" : ""}`} />
+                {isImportingCatalog
+                  ? t(locale, "Import en cours", "Importing")
+                  : t(locale, "Importer le catalogue", "Import catalog")}
+              </Button>
+            </div>
+
+            {importMessage ? (
+              <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                {importMessage}
+              </div>
+            ) : null}
+
+            {importError ? (
+              <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                {importError}
+              </div>
+            ) : null}
+          </Card>
           <Card>
             <p className="text-lg font-medium text-mist-50">
               {t(locale, "Ajouter un article", "Add an item")}

@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 
 import { getSessionUser } from "@/lib/auth/session";
+import { getLocalePreference } from "@/lib/preferences";
 import { createWorkspaceAccessUser } from "@/lib/server/workspace-store";
+import { buildTeamInviteEmail, sendTransactionalEmail } from "@/lib/server/email";
 
 function canManageTeam(role: string) {
   return role === "owner" || role === "admin";
 }
 
 export async function POST(request: Request) {
-  const session = await getSessionUser();
+  const [session, locale] = await Promise.all([
+    getSessionUser(),
+    getLocalePreference()
+  ]);
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -55,7 +60,29 @@ export async function POST(request: Request) {
       title: body.title ?? "Team member"
     });
 
-    return NextResponse.json({ user });
+    let emailSent = false;
+
+    try {
+      const inviteEmail = buildTeamInviteEmail({
+        recipientName: user.name,
+        workspaceName: session.workspace,
+        email: user.email,
+        temporaryPassword: body.password,
+        locale
+      });
+
+      await sendTransactionalEmail({
+        to: user.email,
+        subject: inviteEmail.subject,
+        html: inviteEmail.html,
+        text: inviteEmail.text
+      });
+      emailSent = true;
+    } catch (error) {
+      console.warn("BandOS team invite email failed:", error);
+    }
+
+    return NextResponse.json({ user, emailSent });
   } catch (error) {
     if (error instanceof Error && error.message === "EMAIL_ALREADY_IN_USE") {
       return NextResponse.json(

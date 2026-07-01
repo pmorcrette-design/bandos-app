@@ -97,10 +97,12 @@ type RouteTimelineEntry = {
 
 export function TourRoutePlanner({
   currency,
-  locale
+  locale,
+  showDemoData
 }: {
   currency: SupportedCurrency;
   locale: Locale;
+  showDemoData: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [tourName, setTourName] = useState("");
@@ -168,11 +170,22 @@ export function TourRoutePlanner({
   const routePoints = useMemo(
     () =>
       routeEntries.map((entry) => ({
+        id: entry.id,
         label: entry.title,
-        location: entry.location
+        location: entry.location,
+        kind: entry.kind
       })),
     [routeEntries]
   );
+
+  const legByConnectionKey = useMemo(() => {
+    return new Map(
+      (result?.legs ?? []).map((leg) => [
+        `${leg.fromPointId ?? "unknown"}::${leg.toPointId ?? "unknown"}`,
+        leg
+      ])
+    );
+  }, [result?.legs]);
 
   useEffect(() => {
     if (routePoints.length < 2) {
@@ -399,10 +412,12 @@ export function TourRoutePlanner({
               <Download className="h-4 w-4" />
               {t(locale, "Modèle CSV", "CSV template")}
             </a>
-            <Button type="button" onClick={loadSampleTour}>
-              <FileSpreadsheet className="h-4 w-4" />
-              {t(locale, "Charger un exemple", "Load sample")}
-            </Button>
+            {showDemoData ? (
+              <Button type="button" onClick={loadSampleTour}>
+                <FileSpreadsheet className="h-4 w-4" />
+                {t(locale, "Charger un exemple", "Load sample")}
+              </Button>
+            ) : null}
             {stops.length ? (
               <Button type="button" onClick={validateImportToShows}>
                 {t(locale, "Valider l'import", "Validate import")}
@@ -619,9 +634,11 @@ export function TourRoutePlanner({
 
                 <div className="mt-5 space-y-3">
                   {routeEntries.map((entry, index) => {
-                    const leg = result?.legs[index - 1];
-                    const legFuel = leg ? estimateFuel(leg.distanceMeters) : null;
                     const previousEntry = index > 0 ? routeEntries[index - 1] : null;
+                    const leg = previousEntry
+                      ? legByConnectionKey.get(`${previousEntry.id}::${entry.id}`)
+                      : undefined;
+                    const legFuel = leg ? estimateFuel(leg.distanceMeters) : null;
                     const isMovable = entry.kind === "show" && entry.stopIndex !== null;
                     const canShowLiveLegMetrics = Boolean(
                       leg && result?.source !== "demo"
@@ -674,11 +691,18 @@ export function TourRoutePlanner({
                                   </p>
                                 ) : (
                                   <p className="text-sm text-amber-200">
-                                    {t(
-                                      locale,
-                                      "Distance indisponible tant que le routage live n'a pas abouti.",
-                                      "Distance unavailable until live routing succeeds."
-                                    )}
+                                    {previousEntry?.kind === "start" ||
+                                    entry.kind === "return"
+                                      ? t(
+                                          locale,
+                                          "Segment indisponible: vérifie l'adresse de départ ou de retour pour l'inclure au routing live.",
+                                          "Segment unavailable: verify the departure or return address to include it in live routing."
+                                        )
+                                      : t(
+                                          locale,
+                                          "Distance indisponible tant que le routage live n'a pas abouti.",
+                                          "Distance unavailable until live routing succeeds."
+                                        )}
                                   </p>
                                 )}
                               </div>

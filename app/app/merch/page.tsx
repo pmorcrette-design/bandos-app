@@ -20,8 +20,8 @@ export default async function MerchPage() {
         )}
         description={t(
           locale,
-          "Ajoute, supprime et mets à jour les articles manuellement tant que la connexion SumUp n'est pas finalisée.",
-          "Add, delete, and update items manually until SumUp connection is fully ready."
+          "Ajoute, supprime et mets à jour les articles manuellement, ou importe le catalogue observé depuis les transactions SumUp tout en gardant le stock géré dans BandOS.",
+          "Add, delete, and update items manually, or import the observed catalog from SumUp transactions while keeping stock managed in BandOS."
         )}
       />
 

@@ -39,6 +39,8 @@ export function computeDemoRoute(
 
     return {
       index,
+      fromPointId: previous.id,
+      toPointId: point.id,
       from: previous.label,
       to: point.label,
       distanceMeters,

@@ -6,45 +6,49 @@ import { LanguagePreferenceCard } from "@/components/settings/language-preferenc
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { getSessionUser } from "@/lib/auth/session";
 import { t } from "@/lib/i18n";
 import { getSumUpConnectionStatus } from "@/lib/integrations/sumup";
 import { getCurrencyPreference, getLocalePreference } from "@/lib/preferences";
 
-const settingCards = [
-  {
-    titleFr: "Workspace",
-    titleEn: "Workspace",
-    bodyFr: "WIDESPREAD DISEASE • plan tournée",
-    bodyEn: "WIDESPREAD DISEASE • touring plan",
-    icon: Workflow
-  },
-  {
-    titleFr: "Permissions",
-    titleEn: "Permissions",
-    bodyFr: "owner, admin, member, viewer",
-    bodyEn: "owner, admin, member, viewer",
-    icon: Shield
-  },
-  {
-    titleFr: "Facturation",
-    titleEn: "Billing",
-    bodyFr: "abonnement mensuel",
-    bodyEn: "monthly billing",
-    icon: CreditCard
-  },
-  {
-    titleFr: "Thème",
-    titleEn: "Theme",
-    bodyFr: "interface dark premium",
-    bodyEn: "premium dark interface",
-    icon: Palette
-  }
-] as const;
-
 export default async function SettingsPage() {
-  const currencyPreference = await getCurrencyPreference();
-  const locale = await getLocalePreference();
-  const sumupStatus = await getSumUpConnectionStatus();
+  const [currencyPreference, locale, sumupStatus, session] = await Promise.all([
+    getCurrencyPreference(),
+    getLocalePreference(),
+    getSumUpConnectionStatus(),
+    getSessionUser()
+  ]);
+  const workspaceName = session?.workspace ?? "New workspace";
+  const settingCards = [
+    {
+      titleFr: "Workspace",
+      titleEn: "Workspace",
+      bodyFr: `${workspaceName} • plan tournée`,
+      bodyEn: `${workspaceName} • touring plan`,
+      icon: Workflow
+    },
+    {
+      titleFr: "Permissions",
+      titleEn: "Permissions",
+      bodyFr: "owner, admin, member, viewer",
+      bodyEn: "owner, admin, member, viewer",
+      icon: Shield
+    },
+    {
+      titleFr: "Facturation",
+      titleEn: "Billing",
+      bodyFr: "abonnement mensuel",
+      bodyEn: "monthly billing",
+      icon: CreditCard
+    },
+    {
+      titleFr: "Thème",
+      titleEn: "Theme",
+      bodyFr: "interface dark premium",
+      bodyEn: "premium dark interface",
+      icon: Palette
+    }
+  ] as const;
 
   return (
     <div className="space-y-6">

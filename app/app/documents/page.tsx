@@ -30,7 +30,11 @@ export default async function DocumentsPage() {
           "Upload PDFs, contracts, riders, invoices, passports, route docs, and ATA equipment lists, then regenerate a clean CSV from the same table."
         )}
       />
-      <DocumentsView locale={locale} initialAtaItems={ataItems} />
+      <DocumentsView
+        locale={locale}
+        initialAtaItems={ataItems}
+        includeSeededDocuments={session?.isDemoWorkspace ?? false}
+      />
     </div>
   );
 }

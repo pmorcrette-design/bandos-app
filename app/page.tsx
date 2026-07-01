@@ -14,7 +14,6 @@ import { BandosLogo } from "@/components/brand/bandos-logo";
 import { FadeIn } from "@/components/shared/fade-in";
 import { LanguageToggle } from "@/components/shared/language-toggle";
 import { RouteMap } from "@/components/shared/route-map";
-import { WorkspaceLogo } from "@/components/shared/workspace-logo";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,8 +23,7 @@ import {
   featureCards,
   landingProblems,
   pricingPlans,
-  testimonials,
-  trustedBands,
+  routeOverview,
   workflowSteps
 } from "@/lib/mock-data";
 import { getCurrencyPreference } from "@/lib/preferences";
@@ -181,7 +179,17 @@ export default async function LandingPage() {
                         </div>
                       </div>
                     </div>
-                    <RouteMap compact locale={locale} />
+                    <RouteMap
+                      compact
+                      locale={locale}
+                      title={t(locale, "Routing UK // EU", "UK // EU routing")}
+                      distanceLabel={t(
+                        locale,
+                        "4 dates suivies",
+                        "4 tracked dates"
+                      )}
+                      stops={routeOverview}
+                    />
                   </div>
                 </ScreenshotCard>
               </div>
@@ -193,32 +201,58 @@ export default async function LandingPage() {
       <section className="mx-auto mt-16 max-w-7xl px-6">
         <FadeIn>
           <SectionHeading
-            eyebrow={t(locale, "Construit avec des groupes en tournée", "Built with touring bands")}
+            eyebrow={t(locale, "Pensé pour le terrain", "Built for the road")}
             title={t(
               locale,
-              "Pensé en collaboration directe avec Widespread Disease.",
-              "Shaped in close collaboration with Widespread Disease."
+              "Conçu pour les groupes qui veulent opérer proprement.",
+              "Designed for bands that want a clean operating system."
             )}
             body={t(
               locale,
-              "L'identité du workspace et le flow de démo actuel sont calibrés autour d'un vrai groupe qui opère dans le produit.",
-              "The current workspace identity and demo flow are tuned around one real band operating inside the product."
+              "BandOS se concentre sur la clarté opérationnelle: tournée, concerts, équipe, merch, finance, véhicules et documents critiques dans un seul produit.",
+              "BandOS is focused on operational clarity: tours, shows, team, merch, finance, vehicles, and critical documents in one product."
             )}
           />
-          <div className="mt-8 grid gap-4 sm:max-w-sm">
-            {trustedBands.map((band) => (
-              <Card
-                key={band.name}
-                className="flex flex-col items-center justify-center gap-4 py-6 text-center text-sm font-medium text-mist-100"
-              >
-                <WorkspaceLogo
-                  src={band.logo}
-                  alt={`${band.name} logo`}
-                  size="lg"
-                  className="h-24 w-24 rounded-[30px]"
-                  priority
-                />
-                <span>{band.name}</span>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {[
+              {
+                label: t(locale, "Équipe", "Team"),
+                value: "4 roles",
+                body: t(
+                  locale,
+                  "Owner, admin, membre et viewer avec login séparé par email.",
+                  "Owner, admin, member, and viewer access with separate email logins."
+                )
+              },
+              {
+                label: t(locale, "Concerts", "Shows"),
+                value: "Live ops",
+                body: t(
+                  locale,
+                  "Billetterie, jauge, frais de salle, ingé son, supports et projections 80%.",
+                  "Ticketing, capacity, room costs, sound engineer, support acts, and 80% occupancy projections."
+                )
+              },
+              {
+                label: t(locale, "Documents", "Documents"),
+                value: "ATA ready",
+                body: t(
+                  locale,
+                  "Import et export du Carnet ATA, riders, contrats et docs de route.",
+                  "ATA carnet import/export, riders, contracts, and route documents."
+                )
+              }
+            ].map((item) => (
+              <Card key={item.label}>
+                <p className="text-xs uppercase tracking-[0.24em] text-coral-300">
+                  {item.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-mist-50">
+                  {item.value}
+                </p>
+                <p className="mt-3 text-sm leading-7 text-mist-300">
+                  {item.body}
+                </p>
               </Card>
             ))}
           </div>
@@ -394,29 +428,6 @@ export default async function LandingPage() {
         </FadeIn>
       </section>
 
-      <section className="mx-auto mt-24 max-w-7xl px-6">
-        <FadeIn>
-          <SectionHeading
-            eyebrow="Testimonials"
-            title="Credible for the people actually carrying the run."
-            body="Built to feel at home for artists, managers, drivers, labels, and agents who operate under pressure."
-          />
-          <div className="mt-8 grid gap-4 lg:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <Card key={testimonial.author}>
-                <p className="text-base leading-8 text-mist-100">
-                  “{testimonial.quote}”
-                </p>
-                <div className="mt-6">
-                  <p className="font-medium text-mist-50">{testimonial.author}</p>
-                  <p className="text-sm text-mist-300">{testimonial.title}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </FadeIn>
-      </section>
-
       <section id="pricing" className="mx-auto mt-24 max-w-7xl px-6">
         <FadeIn>
           <SectionHeading
@@ -482,25 +493,37 @@ export default async function LandingPage() {
       </section>
 
       <footer className="mx-auto mt-24 max-w-7xl px-6">
-        <Card className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <BandosLogo />
-            <p className="mt-4 max-w-xl text-sm leading-7 text-mist-300">
-              The operating system for bands on tour.
-            </p>
+        <Card className="flex flex-col gap-8">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <BandosLogo />
+              <p className="mt-4 max-w-xl text-sm leading-7 text-mist-300">
+                The operating system for bands on tour.
+              </p>
+            </div>
+            <div className="grid gap-3 text-sm text-mist-300 sm:text-right">
+              <div className="flex items-center gap-2 sm:justify-end">
+                <Truck className="h-4 w-4 text-coral-300" />
+                Tour services and routing
+              </div>
+              <div className="flex items-center gap-2 sm:justify-end">
+                <MapPinned className="h-4 w-4 text-coral-300" />
+                Travel docs and routing
+              </div>
+              <div className="flex items-center gap-2 sm:justify-end">
+                <Globe2 className="h-4 w-4 text-coral-300" />
+                Multi-role operational workspaces
+              </div>
+            </div>
           </div>
-          <div className="grid gap-3 text-sm text-mist-300 sm:text-right">
-            <div className="flex items-center gap-2 sm:justify-end">
-              <Truck className="h-4 w-4 text-coral-300" />
-              Tour services and routing
-            </div>
-            <div className="flex items-center gap-2 sm:justify-end">
-              <MapPinned className="h-4 w-4 text-coral-300" />
-              Travel docs and routing
-            </div>
-            <div className="flex items-center gap-2 sm:justify-end">
-              <Globe2 className="h-4 w-4 text-coral-300" />
-              Multi-role operational workspaces
+          <div className="border-t border-white/8 pt-5">
+            <div className="flex justify-start sm:justify-end">
+              <Link
+                href="/bandos-admin"
+                className={buttonStyles({ variant: "ghost" })}
+              >
+                BandOS Admin
+              </Link>
             </div>
           </div>
         </Card>

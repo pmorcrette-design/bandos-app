@@ -144,7 +144,7 @@ export function TeamAccessManager({
       );
 
       const payload = (await response.json().catch(() => null)) as
-        | { user?: WorkspaceAccessUser; error?: string }
+        | { user?: WorkspaceAccessUser; error?: string; emailSent?: boolean }
         | null;
 
       if (!response.ok || !payload?.user) {
@@ -168,11 +168,33 @@ export function TeamAccessManager({
       });
 
       if (isCreating) {
+        const successMessage = payload.emailSent
+          ? t(
+              locale,
+              "Accès créé et email envoyé.",
+              "Access created and email sent."
+            )
+          : t(
+              locale,
+              "Accès créé. Email non envoyé pour l'instant.",
+              "Access created. Email not sent yet."
+            );
         closeModal();
+        setFeedback(successMessage);
       } else {
         openEditModal(payload.user);
         setFeedback(
-          t(locale, "Accès équipe mis à jour.", "Team access updated.")
+          payload.emailSent
+            ? t(
+                locale,
+                "Accès équipe mis à jour. Email de rappel envoyé.",
+                "Team access updated. Reminder email sent."
+              )
+            : t(
+                locale,
+                "Accès équipe mis à jour.",
+                "Team access updated."
+              )
         );
       }
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, ArrowRight, CalendarClock, Truck } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
@@ -20,18 +20,22 @@ import {
 } from "@/lib/i18n";
 import { shows } from "@/lib/mock-data";
 import { getMerchInventorySummary } from "@/lib/merch";
-import { getAttendanceProjectionMetrics } from "@/lib/shows";
+import { getAttendanceProjectionMetrics, getTourCalendarDayCount } from "@/lib/shows";
+import type { TicketSalesSnapshot, TicketingEvent } from "@/lib/ticketing/types";
 import {
+  convertCurrency,
   formatCompactCurrency,
   formatCurrency,
+  normalizeCurrency,
   replaceCurrencyInText,
   type SupportedCurrency
 } from "@/lib/utils";
-import { useBandosUIStore } from "@/store/ui-store";
+import { useBandosUIStore, type VehicleCatalogItem } from "@/store/ui-store";
 
 type OperatingShow = {
   id: string;
   source: "imported" | "standalone";
+  isStandalone: boolean;
   tourName: string | null;
   date: string;
   city: string;
@@ -61,8 +65,72 @@ type DashboardTaskLine = {
   status: "todo" | "in progress" | "waiting" | "done";
 };
 
+type TicketingSummaryItem = {
+  showId: string;
+  event: TicketingEvent;
+  snapshot: TicketSalesSnapshot | null;
+};
+
+type ImportedTourSummary = {
+  name: string;
+  currency: SupportedCurrency;
+  shows: OperatingShow[];
+  assignedVehicle: VehicleCatalogItem | null;
+  transportDays: number;
+  transportCost: number;
+};
+
 function getNightCostsTotal(show: Pick<OperatingShow, "roomHire" | "soundEngineerCost" | "localBandCost">) {
   return (show.roomHire ?? 0) + show.soundEngineerCost + show.localBandCost;
+}
+
+function parseDashboardDateValue(value: string) {
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const timestamp = Date.parse(normalizedValue);
+
+  if (!Number.isNaN(timestamp)) {
+    return timestamp;
+  }
+
+  const dayFirstMatch = normalizedValue.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+
+  if (!dayFirstMatch) {
+    return null;
+  }
+
+  return Date.UTC(
+    Number(dayFirstMatch[3]),
+    Number(dayFirstMatch[2]) - 1,
+    Number(dayFirstMatch[1])
+  );
+}
+
+function compareDashboardDates(left: string, right: string) {
+  const leftTimestamp = parseDashboardDateValue(left);
+  const rightTimestamp = parseDashboardDateValue(right);
+
+  if (leftTimestamp !== null && rightTimestamp !== null) {
+    if (leftTimestamp !== rightTimestamp) {
+      return leftTimestamp - rightTimestamp;
+    }
+
+    return 0;
+  }
+
+  if (leftTimestamp !== null) {
+    return -1;
+  }
+
+  if (rightTimestamp !== null) {
+    return 1;
+  }
+
+  return left.localeCompare(right);
 }
 
 function getImportedLocalBandCost(folder: {
@@ -189,7 +257,7 @@ function buildOperatingTaskLines(
   });
 
   return items
-    .sort((left, right) => left.deadline.localeCompare(right.deadline))
+    .sort((left, right) => compareDashboardDates(left.deadline, right.deadline))
     .slice(0, 4);
 }
 
@@ -207,25 +275,62 @@ function buildRouteStops(locale: Locale, operatingShows: OperatingShow[]) {
 
 export function DashboardLiveView({
   currency,
-  locale
+  locale,
+  showDemoData
 }: {
   currency: SupportedCurrency;
   locale: Locale;
+  showDemoData: boolean;
 }) {
   const importedShowFolders = useBandosUIStore((state) => state.importedShowFolders);
   const hiddenStandaloneShowIds = useBandosUIStore(
     (state) => state.hiddenStandaloneShowIds
   );
   const merchCatalog = useBandosUIStore((state) => state.merchCatalog);
+  const vehicleCatalog = useBandosUIStore((state) => state.vehicleCatalog);
+  const tourVehicleAssignments = useBandosUIStore((state) => state.tourVehicleAssignments);
+  const [ticketingSummaries, setTicketingSummaries] = useState<TicketingSummaryItem[]>([]);
 
   const inventory = useMemo(
     () => getMerchInventorySummary(merchCatalog),
     [merchCatalog]
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTicketingSummary() {
+      const response = await fetch("/api/ticketing/summary", {
+        method: "GET",
+        cache: "no-store"
+      }).catch(() => null);
+
+      if (!response?.ok) {
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as
+        | { summaries?: TicketingSummaryItem[] }
+        | null;
+
+      if (!cancelled && payload?.summaries) {
+        setTicketingSummaries(payload.summaries);
+      }
+    }
+
+    void loadTicketingSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const visibleStandaloneShows = useMemo(
-    () => shows.filter((show) => !hiddenStandaloneShowIds.includes(show.id)),
-    [hiddenStandaloneShowIds]
+    () =>
+      showDemoData
+        ? shows.filter((show) => !hiddenStandaloneShowIds.includes(show.id))
+        : [],
+    [hiddenStandaloneShowIds, showDemoData]
   );
 
   const importedOperatingShows = useMemo<OperatingShow[]>(
@@ -233,6 +338,7 @@ export function DashboardLiveView({
       importedShowFolders.map((folder) => ({
         id: folder.id,
         source: "imported",
+        isStandalone: folder.isStandalone,
         tourName: folder.tourName,
         date: folder.date,
         city: folder.city,
@@ -266,6 +372,7 @@ export function DashboardLiveView({
       visibleStandaloneShows.map((show) => ({
         id: show.id,
         source: "standalone",
+        isStandalone: true,
         tourName: null,
         date: show.date,
         city: show.city,
@@ -291,12 +398,24 @@ export function DashboardLiveView({
   const allOperatingShows = useMemo(
     () =>
       [...importedOperatingShows, ...standaloneOperatingShows].sort((left, right) =>
-        left.date.localeCompare(right.date)
+        compareDashboardDates(left.date, right.date)
       ),
     [importedOperatingShows, standaloneOperatingShows]
   );
 
-  const importedTours = useMemo(() => {
+  const vehicleById = useMemo(
+    () => new Map(vehicleCatalog.map((vehicle) => [vehicle.id, vehicle] as const)),
+    [vehicleCatalog]
+  );
+  const assignmentByTour = useMemo(
+    () =>
+      new Map(
+        tourVehicleAssignments.map((assignment) => [assignment.tourName, assignment] as const)
+      ),
+    [tourVehicleAssignments]
+  );
+
+  const importedTours = useMemo<ImportedTourSummary[]>(() => {
     const grouped = new Map<
       string,
       {
@@ -307,6 +426,10 @@ export function DashboardLiveView({
     >();
 
     for (const show of importedOperatingShows) {
+      if (show.isStandalone) {
+        continue;
+      }
+
       const key = show.tourName ?? "Imported tour";
       const existing = grouped.get(key) ?? {
         name: key,
@@ -318,14 +441,42 @@ export function DashboardLiveView({
       grouped.set(key, existing);
     }
 
-    return Array.from(grouped.values()).map((tour) => ({
-      ...tour,
-      shows: [...tour.shows].sort((left, right) => left.date.localeCompare(right.date))
-    }));
-  }, [importedOperatingShows]);
+    return Array.from(grouped.values())
+      .map((tour) => {
+        const shows = [...tour.shows].sort((left, right) =>
+          compareDashboardDates(left.date, right.date)
+        );
+        const assignedVehicle =
+          vehicleById.get(assignmentByTour.get(tour.name)?.vehicleId ?? "") ?? null;
+        const transportDays = getTourCalendarDayCount(
+          shows.map((show) => ({ date: show.date }))
+        );
+        const transportCost = assignedVehicle
+          ? assignedVehicle.estimatedDailyPrice * transportDays
+          : 0;
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const upcomingShows = allOperatingShows.filter((show) => show.date >= todayIso);
+        return {
+          ...tour,
+          shows,
+          assignedVehicle,
+          transportDays,
+          transportCost
+        };
+      })
+      .sort((left, right) =>
+        compareDashboardDates(left.shows[0]?.date ?? "", right.shows[0]?.date ?? "")
+      );
+  }, [assignmentByTour, importedOperatingShows, vehicleById]);
+
+  const todayTimestamp = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.getTime();
+  }, []);
+  const upcomingShows = allOperatingShows.filter((show) => {
+    const showTimestamp = parseDashboardDateValue(show.date);
+    return showTimestamp !== null && showTimestamp >= todayTimestamp;
+  });
   const nextShow =
     upcomingShows[0] ??
     allOperatingShows[0] ??
@@ -333,7 +484,12 @@ export function DashboardLiveView({
     importedOperatingShows[0];
 
   const activeImportedTour =
-    importedTours.find((tour) => tour.shows.some((show) => show.date >= todayIso)) ??
+    importedTours.find((tour) =>
+      tour.shows.some((show) => {
+        const showTimestamp = parseDashboardDateValue(show.date);
+        return showTimestamp !== null && showTimestamp >= todayTimestamp;
+      })
+    ) ??
     importedTours[0] ??
     null;
   const activeRouteShows = activeImportedTour?.shows.length
@@ -354,6 +510,10 @@ export function DashboardLiveView({
   const datesToComplete = allOperatingShows.filter(
     (show) => !isShowOperationallyReady(show)
   ).length;
+  const totalTransportCosts = importedTours.reduce(
+    (sum, tour) => sum + tour.transportCost,
+    0
+  );
   const tourNightCostsTotal = allOperatingShows.reduce(
     (sum, show) =>
       sum +
@@ -373,7 +533,7 @@ export function DashboardLiveView({
     });
 
     return sum + (projection?.delta ?? 0);
-  }, 0);
+  }, 0) - totalTransportCosts;
   const projectedShowsAtEighty = allOperatingShows.filter((show) =>
     Boolean(
       getAttendanceProjectionMetrics({
@@ -383,7 +543,7 @@ export function DashboardLiveView({
           show.source === "imported"
             ? getNightCostsTotal(show)
             : show.roomHire ?? 0
-      })
+        })
     )
   ).length;
   const borderReadiness = allOperatingShows.length
@@ -421,11 +581,15 @@ export function DashboardLiveView({
     },
     {
       label: t(locale, "Coûts de dates", "Show costs"),
-      value: formatCompactCurrency(tourNightCostsTotal, displayCurrency, "GBP"),
+      value: formatCompactCurrency(
+        tourNightCostsTotal + totalTransportCosts,
+        displayCurrency,
+        "GBP"
+      ),
       change: t(
         locale,
-        "Salle, ingé et groupes locaux",
-        "Room, engineer, and local bands"
+        "Salle, ingé, groupes locaux et transport",
+        "Room, engineer, local bands, and transport"
       )
     },
     {
@@ -460,6 +624,100 @@ export function DashboardLiveView({
       change: t(locale, "Validation et coûts manquants", "Validation or costs missing")
     }
   ];
+
+  const ticketingDashboardStats = useMemo(() => {
+    const linkedShows = ticketingSummaries.length;
+
+    if (!linkedShows) {
+      return null;
+    }
+
+    const totals = ticketingSummaries.reduce(
+      (sum, summary) => {
+        const sourceCurrency = normalizeCurrency(summary.event.currency);
+        const grossRevenue =
+          summary.snapshot?.grossRevenue ?? summary.event.grossRevenue;
+        const netRevenue = summary.snapshot?.netRevenue ?? summary.event.netRevenue;
+        const ticketsSold = summary.snapshot?.ticketsSold ?? summary.event.ticketsSold;
+        const capacitySoldPercentage =
+          summary.snapshot?.capacitySoldPercentage ??
+          (summary.event.capacity && summary.event.capacity > 0
+            ? (summary.event.ticketsSold / summary.event.capacity) * 100
+            : null);
+        const guestlistCount =
+          summary.snapshot?.guestlistCount ?? summary.event.guestlistCount;
+        const refundCount =
+          summary.snapshot?.refundCount ?? summary.event.refundCount;
+        const averageTicketPrice =
+          summary.snapshot?.averageTicketPrice ?? summary.event.averageTicketPrice;
+
+        return {
+          grossRevenue:
+            sum.grossRevenue + convertCurrency(grossRevenue, sourceCurrency, "GBP"),
+          netRevenue:
+            sum.netRevenue + convertCurrency(netRevenue, sourceCurrency, "GBP"),
+          ticketsSold: sum.ticketsSold + ticketsSold,
+          guestlistCount: sum.guestlistCount + guestlistCount,
+          refundCount: sum.refundCount + refundCount,
+          averageTicketPriceTotal:
+            sum.averageTicketPriceTotal +
+            (averageTicketPrice
+              ? convertCurrency(averageTicketPrice, sourceCurrency, "GBP")
+              : 0),
+          averageTicketPriceCount:
+            sum.averageTicketPriceCount + (averageTicketPrice ? 1 : 0),
+          capacitySoldTotal:
+            sum.capacitySoldTotal + (capacitySoldPercentage ?? 0),
+          capacitySoldCount:
+            sum.capacitySoldCount + (capacitySoldPercentage != null ? 1 : 0)
+        };
+      },
+      {
+        grossRevenue: 0,
+        netRevenue: 0,
+        ticketsSold: 0,
+        guestlistCount: 0,
+        refundCount: 0,
+        averageTicketPriceTotal: 0,
+        averageTicketPriceCount: 0,
+        capacitySoldTotal: 0,
+        capacitySoldCount: 0
+      }
+    );
+
+    return [
+      {
+        label: t(locale, "Ticketing gross", "Ticketing gross"),
+        value: formatCompactCurrency(totals.grossRevenue, currency, "GBP"),
+        change: `${linkedShows} ${t(locale, "date(s) liée(s)", "linked show(s)")}`
+      },
+      {
+        label: t(locale, "Ticketing net", "Ticketing net"),
+        value: formatCompactCurrency(totals.netRevenue, currency, "GBP"),
+        change: `${totals.refundCount} ${t(locale, "refunds", "refunds")}`
+      },
+      {
+        label: t(locale, "Tickets vendus", "Tickets sold"),
+        value: String(totals.ticketsSold),
+        change: `${totals.guestlistCount} guestlist`
+      },
+      {
+        label: t(locale, "Taux de remplissage", "Capacity sold"),
+        value:
+          totals.capacitySoldCount > 0
+            ? `${(totals.capacitySoldTotal / totals.capacitySoldCount).toFixed(1)}%`
+            : "—",
+        change:
+          totals.averageTicketPriceCount > 0
+            ? `${t(locale, "billet moyen", "avg ticket")} ${formatCurrency(
+                totals.averageTicketPriceTotal / totals.averageTicketPriceCount,
+                currency,
+                "GBP"
+              )}`
+            : t(locale, "Billet moyen indisponible", "Average ticket unavailable")
+      }
+    ];
+  }, [currency, locale, ticketingSummaries]);
 
   const deadlineItems = operatingTaskLines;
 
@@ -545,6 +803,14 @@ export function DashboardLiveView({
           <StatCard key={stat.label} {...stat} />
         ))}
       </div>
+
+      {ticketingDashboardStats ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {ticketingDashboardStats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
@@ -703,6 +969,13 @@ export function DashboardLiveView({
                     "No active tour or visible show right now."
                   )}
           </p>
+          {activeImportedTour?.assignedVehicle ? (
+            <p className="mt-2 text-sm text-mist-300">
+              {activeImportedTour.assignedVehicle.name} • {activeImportedTour.transportDays}{" "}
+              {t(locale, "jour(s)", "day(s)")} •{" "}
+              {formatCurrency(activeImportedTour.transportCost, displayCurrency, "GBP")}
+            </p>
+          ) : null}
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-mist-300">

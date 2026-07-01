@@ -1,11 +1,15 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { TourRoutePlanner } from "@/components/tours/tour-route-planner";
+import { getSessionUser } from "@/lib/auth/session";
 import { t } from "@/lib/i18n";
 import { getCurrencyPreference, getLocalePreference } from "@/lib/preferences";
 
 export default async function ToursPage() {
-  const currencyPreference = await getCurrencyPreference();
-  const locale = await getLocalePreference();
+  const [currencyPreference, locale, session] = await Promise.all([
+    getCurrencyPreference(),
+    getLocalePreference(),
+    getSessionUser()
+  ]);
 
   return (
     <div className="space-y-6">
@@ -23,7 +27,11 @@ export default async function ToursPage() {
         )}
       />
 
-      <TourRoutePlanner currency={currencyPreference} locale={locale} />
+      <TourRoutePlanner
+        currency={currencyPreference}
+        locale={locale}
+        showDemoData={session?.isDemoWorkspace ?? false}
+      />
     </div>
   );
 }

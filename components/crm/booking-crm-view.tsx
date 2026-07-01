@@ -42,7 +42,7 @@ function parseInteger(value: string) {
   return Math.floor(parsed);
 }
 
-function formatRoomHire(value: number | null) {
+function formatOptionalAmount(value: number | null) {
   return typeof value === "number" ? String(value) : "";
 }
 
@@ -61,7 +61,8 @@ const emptyDraft = {
   status: "not contacted" as EditableCrmContact["status"],
   lastContact: "",
   tags: "",
-  roomHire: ""
+  roomHire: "",
+  defaultFee: ""
 };
 
 export function BookingCrmView({
@@ -94,6 +95,7 @@ export function BookingCrmView({
   const [lastContact, setLastContact] = useState(emptyDraft.lastContact);
   const [tags, setTags] = useState(emptyDraft.tags);
   const [roomHire, setRoomHire] = useState(emptyDraft.roomHire);
+  const [defaultFee, setDefaultFee] = useState(emptyDraft.defaultFee);
   const [saveMessage, setSaveMessage] = useState("");
 
   const deferredQuery = useDeferredValue(query);
@@ -123,7 +125,9 @@ export function BookingCrmView({
           contact.notes,
           contact.status,
           contact.lastContact,
-          contact.tags.join(" ")
+          contact.tags.join(" "),
+          String(contact.roomHire ?? ""),
+          String(contact.defaultFee ?? "")
         ]
           .join(" ")
           .toLowerCase()
@@ -149,6 +153,7 @@ export function BookingCrmView({
       setLastContact(emptyDraft.lastContact);
       setTags(emptyDraft.tags);
       setRoomHire(emptyDraft.roomHire);
+      setDefaultFee(emptyDraft.defaultFee);
       setSaveMessage("");
       return;
     }
@@ -169,6 +174,7 @@ export function BookingCrmView({
       setLastContact(new Date().toISOString().slice(0, 10));
       setTags(emptyDraft.tags);
       setRoomHire(emptyDraft.roomHire);
+      setDefaultFee(emptyDraft.defaultFee);
       setSaveMessage("");
       return;
     }
@@ -191,7 +197,8 @@ export function BookingCrmView({
     setStatus(selectedContact.status);
     setLastContact(selectedContact.lastContact);
     setTags(selectedContact.tags.join(", "));
-    setRoomHire(formatRoomHire(selectedContact.roomHire));
+    setRoomHire(formatOptionalAmount(selectedContact.roomHire));
+    setDefaultFee(formatOptionalAmount(selectedContact.defaultFee));
     setSaveMessage("");
   }, [isCreating, selectedContact]);
 
@@ -207,13 +214,14 @@ export function BookingCrmView({
   }
 
   function saveContact() {
+    const isBandContact = kind === "band";
     const payload = {
       company: company.trim() || t(locale, "Nouveau contact", "New contact"),
       kind,
       email: email.trim(),
       phone: phone.trim(),
       instagram: instagram.trim(),
-      capacity: parseInteger(capacity),
+      capacity: isBandContact ? 0 : parseInteger(capacity),
       city: city.trim(),
       country: country.trim(),
       dealHistory: dealHistory.trim(),
@@ -225,7 +233,8 @@ export function BookingCrmView({
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
-      roomHire: parseOptionalNumber(roomHire)
+      roomHire: isBandContact ? null : parseOptionalNumber(roomHire),
+      defaultFee: isBandContact ? parseOptionalNumber(defaultFee) : null
     };
 
     if (isCreating) {
@@ -313,7 +322,12 @@ export function BookingCrmView({
                       {contact.company}
                     </p>
                     <p className="mt-1 truncate text-sm text-mist-300">
-                      {contact.email || contact.phone || contact.instagram || "—"}
+                      {contact.kind === "band" &&
+                      typeof contact.defaultFee === "number"
+                        ? `${formatCurrency(contact.defaultFee, currency, "GBP")} • ${
+                            contact.email || contact.phone || contact.instagram || "—"
+                          }`
+                        : contact.email || contact.phone || contact.instagram || "—"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm lg:contents">
@@ -367,8 +381,8 @@ export function BookingCrmView({
           isCreating
             ? t(
                 locale,
-                "Crée un contact booking puis retrouve-le ensuite avec la recherche libre.",
-                "Create a booking contact and then find it again with free search."
+                "Crée un contact booking ou groupe, puis retrouve-le ensuite avec la recherche libre.",
+                "Create a booking or band contact, then find it again with free search."
               )
             : selectedContact
               ? `${translateCrmKind(locale, selectedContact.kind)} • ${selectedContact.city}, ${selectedContact.country}`
@@ -390,7 +404,18 @@ export function BookingCrmView({
               <select
                 value={kind}
                 onChange={(event) =>
-                  setKind(event.target.value as EditableCrmContact["kind"])
+                  {
+                    const nextKind = event.target.value as EditableCrmContact["kind"];
+                    setKind(nextKind);
+                    setSaveMessage("");
+
+                    if (nextKind === "band") {
+                      setCapacity("");
+                      setRoomHire("");
+                    } else {
+                      setDefaultFee("");
+                    }
+                  }
                 }
                 className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
               >
@@ -405,6 +430,9 @@ export function BookingCrmView({
                 </option>
                 <option value="booking agent" className="bg-graphite-900">
                   {translateCrmKind(locale, "booking agent")}
+                </option>
+                <option value="band" className="bg-graphite-900">
+                  {translateCrmKind(locale, "band")}
                 </option>
               </select>
             </label>
@@ -446,26 +474,42 @@ export function BookingCrmView({
                 onChange={(event) => setCountry(event.target.value)}
               />
             </label>
-            <label className="space-y-2">
-              <span className="text-sm text-mist-200">
-                {t(locale, "Jauge", "Capacity")}
-              </span>
-              <Input
-                value={capacity}
-                onChange={(event) => setCapacity(event.target.value)}
-                inputMode="numeric"
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm text-mist-200">
-                {t(locale, "Prix de la salle", "Room hire")}
-              </span>
-              <Input
-                value={roomHire}
-                onChange={(event) => setRoomHire(event.target.value)}
-                inputMode="decimal"
-              />
-            </label>
+            {kind === "band" ? (
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-sm text-mist-200">
+                  {t(locale, "Cachet du groupe", "Band fee")}
+                </span>
+                <Input
+                  value={defaultFee}
+                  onChange={(event) => setDefaultFee(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="150"
+                />
+              </label>
+            ) : (
+              <>
+                <label className="space-y-2">
+                  <span className="text-sm text-mist-200">
+                    {t(locale, "Jauge", "Capacity")}
+                  </span>
+                  <Input
+                    value={capacity}
+                    onChange={(event) => setCapacity(event.target.value)}
+                    inputMode="numeric"
+                  />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-sm text-mist-200">
+                    {t(locale, "Prix de la salle", "Room hire")}
+                  </span>
+                  <Input
+                    value={roomHire}
+                    onChange={(event) => setRoomHire(event.target.value)}
+                    inputMode="decimal"
+                  />
+                </label>
+              </>
+            )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -561,17 +605,25 @@ export function BookingCrmView({
 
           <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
             <p className="text-xs uppercase tracking-[0.24em] text-mist-300">
-              {t(locale, "Aperçu salle", "Venue snapshot")}
+              {kind === "band"
+                ? t(locale, "Aperçu groupe", "Band snapshot")
+                : t(locale, "Aperçu salle", "Venue snapshot")}
             </p>
             <p className="mt-2 text-sm text-mist-50">
-              {capacity
-                ? `${parseInteger(capacity)} ${t(locale, "places", "cap")}`
-                : t(locale, "Jauge non renseignée", "Capacity not set")}
+              {kind === "band"
+                ? company.trim() || t(locale, "Groupe sans nom", "Unnamed band")
+                : capacity
+                  ? `${parseInteger(capacity)} ${t(locale, "places", "cap")}`
+                  : t(locale, "Jauge non renseignée", "Capacity not set")}
             </p>
             <p className="mt-1 text-sm text-mist-300">
-              {parseOptionalNumber(roomHire) !== null
-                ? formatCurrency(parseOptionalNumber(roomHire) ?? 0, currency, "GBP")
-                : t(locale, "Prix de salle non renseigné", "Room hire not set")}
+              {kind === "band"
+                ? parseOptionalNumber(defaultFee) !== null
+                  ? formatCurrency(parseOptionalNumber(defaultFee) ?? 0, currency, "GBP")
+                  : t(locale, "Cachet non renseigné", "Band fee not set")
+                : parseOptionalNumber(roomHire) !== null
+                  ? formatCurrency(parseOptionalNumber(roomHire) ?? 0, currency, "GBP")
+                  : t(locale, "Prix de salle non renseigné", "Room hire not set")}
             </p>
           </div>
 

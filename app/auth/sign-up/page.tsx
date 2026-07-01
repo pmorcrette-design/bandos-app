@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Building2, LockKeyhole, Mail, User2 } from "lucide-react";
 
-import { signInWithGoogleAction, signUpAction } from "@/app/actions";
+import { signUpAction } from "@/app/actions";
 import { BandosLogo } from "@/components/brand/bandos-logo";
 import { LanguageToggle } from "@/components/shared/language-toggle";
 import { Button, buttonStyles } from "@/components/ui/button";
@@ -67,7 +67,11 @@ export default async function SignUpPage({
             </span>
             <div className="relative">
               <User2 className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-mist-300" />
-              <Input name="name" defaultValue="Alex Mercer" className="pl-10" />
+              <Input
+                name="name"
+                placeholder={t(locale, "Ton nom", "Your name")}
+                className="pl-10"
+              />
             </div>
           </label>
           <label className="space-y-2">
@@ -79,7 +83,7 @@ export default async function SignUpPage({
               <Input
                 name="email"
                 type="email"
-                defaultValue="ops@widespreaddisease.com"
+                placeholder="you@yourband.com"
                 className="pl-10"
               />
             </div>
@@ -92,7 +96,7 @@ export default async function SignUpPage({
               <Building2 className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-mist-300" />
               <Input
                 name="workspace"
-                defaultValue="WIDESPREAD DISEASE"
+                placeholder={t(locale, "Nom du groupe", "Band name")}
                 className="pl-10"
               />
             </div>
@@ -106,7 +110,7 @@ export default async function SignUpPage({
               <Input
                 name="password"
                 type="password"
-                defaultValue="touring-demo"
+                placeholder={t(locale, "Choisis un mot de passe", "Choose a password")}
                 className="pl-10"
               />
             </div>
@@ -114,12 +118,6 @@ export default async function SignUpPage({
           <Button type="submit" className="w-full">
             {t(locale, "Créer le workspace", "Create workspace")}
             <ArrowRight className="h-4 w-4" />
-          </Button>
-        </form>
-
-        <form action={signInWithGoogleAction} className="mt-3">
-          <Button type="submit" variant="secondary" className="w-full">
-            {t(locale, "Continuer avec Google", "Continue with Google")}
           </Button>
         </form>
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 
-import { signInAction, signInWithGoogleAction } from "@/app/actions";
+import { signInAction } from "@/app/actions";
 import { BandosLogo } from "@/components/brand/bandos-logo";
 import { LanguageToggle } from "@/components/shared/language-toggle";
 import { Button, buttonStyles } from "@/components/ui/button";
@@ -17,9 +17,12 @@ const errorMessages = {
     fr: "Email ou mot de passe incorrect. Utilise un compte d'équipe actif.",
     en: "Incorrect email or password. Use an active team account."
   },
-  demo_unavailable: {
-    fr: "Le compte de démo n'est pas disponible pour le moment.",
-    en: "The demo account is not available right now."
+} as const;
+
+const successMessages = {
+  reset_success: {
+    fr: "Ton mot de passe a été mis à jour. Tu peux te reconnecter.",
+    en: "Your password was updated. You can sign in again."
   }
 } as const;
 
@@ -34,9 +37,17 @@ export default async function SignInPage({
     typeof resolvedSearchParams.error === "string"
       ? resolvedSearchParams.error
       : "";
+  const resetCode =
+    typeof resolvedSearchParams.reset === "string"
+      ? resolvedSearchParams.reset
+      : "";
   const errorMessage =
     errorCode in errorMessages
       ? errorMessages[errorCode as keyof typeof errorMessages][locale]
+      : null;
+  const successMessage =
+    resetCode in successMessages
+      ? successMessages[resetCode as keyof typeof successMessages][locale]
       : null;
 
   return (
@@ -91,14 +102,20 @@ export default async function SignInPage({
         <p className="mt-3 text-sm leading-7 text-mist-300">
           {t(
             locale,
-            "Utilise un compte équipe avec email et mot de passe. Les comptes de test WIDESPREAD DISEASE restent disponibles pour explorer tout le produit.",
-            "Use a team account with email and password. WIDESPREAD DISEASE test accounts stay available so you can explore the full product flow."
+            "Utilise un compte équipe avec email et mot de passe pour accéder à ton workspace BandOS.",
+            "Use your team email and password to access your BandOS workspace."
           )}
         </p>
 
         {errorMessage ? (
           <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             {errorMessage}
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+            {successMessage}
           </div>
         ) : null}
 
@@ -112,8 +129,7 @@ export default async function SignInPage({
               <Input
                 name="email"
                 type="email"
-                defaultValue="ops@widespreaddisease.com"
-                placeholder="ops@widespreaddisease.com"
+                placeholder="you@yourband.com"
                 className="pl-10"
               />
             </div>
@@ -127,8 +143,7 @@ export default async function SignInPage({
               <Input
                 name="password"
                 type="password"
-                defaultValue="touring-demo"
-                placeholder="touring-demo"
+                placeholder={t(locale, "Ton mot de passe", "Your password")}
                 className="pl-10"
               />
             </div>
@@ -139,44 +154,6 @@ export default async function SignInPage({
           </Button>
         </form>
 
-        <form action={signInWithGoogleAction} className="mt-3">
-          <Button type="submit" variant="secondary" className="w-full">
-            {t(locale, "Continuer avec le compte démo", "Continue with demo account")}
-          </Button>
-        </form>
-
-        <div className="mt-6 rounded-[24px] border border-white/8 bg-white/[0.03] p-4 text-sm text-mist-200">
-          <p className="text-xs uppercase tracking-[0.24em] text-mist-300">
-            {t(locale, "Comptes prêts à tester", "Ready-to-test accounts")}
-          </p>
-          <div className="mt-3 space-y-2">
-            {[
-              "ops@widespreaddisease.com",
-              "manager@widespreaddisease.com",
-              "foh@widespreaddisease.com",
-              "merch@widespreaddisease.com",
-              "driver@widespreaddisease.com"
-            ].map((accountEmail) => (
-              <div key={accountEmail} className="flex items-center justify-between gap-3">
-                <span>{accountEmail}</span>
-                <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-mist-300">
-                  touring-demo
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Link
-          href="/demo"
-          className={buttonStyles({
-            variant: "ghost",
-            className: "mt-3 w-full justify-center"
-          })}
-        >
-          {t(locale, "Ouvrir directement la démo", "Open demo workspace directly")}
-        </Link>
-
         <p className="mt-6 text-sm text-mist-300">
           {t(locale, "Besoin d'un nouveau workspace ?", "Need a new workspace?")}{" "}
           <Link
@@ -184,6 +161,14 @@ export default async function SignInPage({
             className="font-medium text-coral-300 transition hover:text-coral-200"
           >
             {t(locale, "Créer un compte", "Create an account")}
+          </Link>
+        </p>
+        <p className="mt-3 text-sm text-mist-300">
+          <Link
+            href="/auth/forgot-password"
+            className="font-medium text-coral-300 transition hover:text-coral-200"
+          >
+            {t(locale, "Mot de passe oublié ?", "Forgot password?")}
           </Link>
         </p>
         <Link

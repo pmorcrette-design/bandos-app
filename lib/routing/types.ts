@@ -5,9 +5,13 @@ export type RoutePlannerOptions = {
   departureTime?: string | null;
 };
 
+export type RoutePlannerPointKind = "start" | "show" | "return";
+
 export type RoutePlannerPoint = {
+  id: string;
   label: string;
   location: string;
+  kind?: RoutePlannerPointKind;
   distanceFromPreviousKm?: number;
 };
 
@@ -19,6 +23,8 @@ export type RoutePlannerRequest = {
 
 export type RouteLegResult = {
   index: number;
+  fromPointId: string | null;
+  toPointId: string | null;
   from: string;
   to: string;
   distanceMeters: number;

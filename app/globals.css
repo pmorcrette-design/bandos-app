@@ -57,7 +57,7 @@
 
 @layer utilities {
   .surface {
-    @apply rounded-[28px] border border-white/8 bg-white/[0.04] shadow-card backdrop-blur-xl;
+    @apply rounded-[28px] border border-white/10 bg-white/[0.04] shadow-card backdrop-blur-xl;
   }
 
   .text-balance {
@@ -77,4 +77,106 @@
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  body {
+    background-image: none !important;
+  }
+
+  [data-shell-sidebar="true"],
+  [data-shell-topbar="true"],
+  [data-print-hide="true"] {
+    display: none !important;
+  }
+
+  [data-workspace-layout="true"],
+  [data-workspace-content="true"],
+  [data-workspace-main="true"] {
+    display: block !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  [data-show-workspace="true"][data-print-mode="true"] {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  [data-day-sheet-root="true"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: auto;
+  }
+
+  [data-day-sheet-root="true"] * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-show-print-root="true"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #f7f7f8 !important;
+  }
+
+  [data-show-print-root="true"] * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-show-print-page="true"] {
+    width: auto !important;
+    min-height: auto !important;
+    margin: 0 auto 8mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  [data-show-print-page="true"]:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  [data-epk-print-root="true"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #121212 !important;
+  }
+
+  [data-epk-print-root="true"] * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-epk-print-page="true"] {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  [data-epk-print-page="true"]:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
 }

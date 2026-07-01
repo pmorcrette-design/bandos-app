@@ -94,7 +94,7 @@ export type Show = {
 export type CrmContact = {
   id: string;
   company: string;
-  kind: "venue" | "promoter" | "festival" | "booking agent";
+  kind: "venue" | "promoter" | "festival" | "booking agent" | "band";
   email: string;
   phone: string;
   instagram: string;
@@ -108,6 +108,7 @@ export type CrmContact = {
   lastContact: string;
   tags: string[];
   roomHire: number | null;
+  defaultFee: number | null;
 };
 
 export type Provider = {
@@ -684,7 +685,8 @@ export const crmContacts: CrmContact[] = [
     status: "confirmed",
     lastContact: "2026-05-11",
     tags: ["UK specialist", "merch friendly", "return room"],
-    roomHire: 250
+    roomHire: 250,
+    defaultFee: null
   },
   {
     id: "crm-peer-hat",
@@ -702,7 +704,8 @@ export const crmContacts: CrmContact[] = [
     status: "negotiating",
     lastContact: "2026-05-14",
     tags: ["local support needed", "return room"],
-    roomHire: 180
+    roomHire: 180,
+    defaultFee: null
   },
   {
     id: "crm-riot-north",
@@ -720,7 +723,8 @@ export const crmContacts: CrmContact[] = [
     status: "confirmed",
     lastContact: "2026-05-15",
     tags: ["Scotland", "repeat promoter"],
-    roomHire: null
+    roomHire: null,
+    defaultFee: null
   },
   {
     id: "crm-malko",
@@ -738,7 +742,8 @@ export const crmContacts: CrmContact[] = [
     status: "replied",
     lastContact: "2026-05-08",
     tags: ["EU specialist", "agent"],
-    roomHire: null
+    roomHire: null,
+    defaultFee: null
   },
   {
     id: "crm-bloodstock",
@@ -756,7 +761,8 @@ export const crmContacts: CrmContact[] = [
     status: "contacted",
     lastContact: "2026-05-13",
     tags: ["festival", "high capacity"],
-    roomHire: null
+    roomHire: null,
+    defaultFee: null
   },
   {
     id: "crm-helio",
@@ -774,7 +780,8 @@ export const crmContacts: CrmContact[] = [
     status: "contacted",
     lastContact: "2026-05-03",
     tags: ["EU specialist", "customs timing"],
-    roomHire: 520
+    roomHire: 520,
+    defaultFee: null
   },
   {
     id: "crm-baroeg",
@@ -792,7 +799,8 @@ export const crmContacts: CrmContact[] = [
     status: "replied",
     lastContact: "2026-05-09",
     tags: ["EU specialist", "EPK request"],
-    roomHire: 480
+    roomHire: 480,
+    defaultFee: null
   }
 ];
 

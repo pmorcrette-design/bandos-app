@@ -50,13 +50,14 @@ export function translateCrmStatus(
 
 export function translateCrmKind(
   locale: Locale,
-  kind: "venue" | "promoter" | "festival" | "booking agent"
+  kind: "venue" | "promoter" | "festival" | "booking agent" | "band"
 ) {
   const map = {
     venue: t(locale, "salle", "venue"),
     promoter: t(locale, "promoteur", "promoter"),
     festival: t(locale, "festival", "festival"),
-    "booking agent": t(locale, "agent de booking", "booking agent")
+    "booking agent": t(locale, "agent de booking", "booking agent"),
+    band: t(locale, "groupe", "band")
   } as const;
 
   return map[kind];
@@ -180,7 +181,10 @@ export function translateDocumentCategory(locale: Locale, category: string) {
     Passports: t(locale, "Passeports", "Passports"),
     "Route Docs": t(locale, "Docs route", "Route Docs"),
     Travel: t(locale, "Voyage", "Travel"),
-    Uploaded: t(locale, "Importé", "Uploaded")
+    Uploaded: t(locale, "Importé", "Uploaded"),
+    "Stage Plot": t(locale, "Stage plot", "Stage Plot"),
+    "Input List": t(locale, "Input list", "Input List"),
+    "Venue Photo": t(locale, "Photo de salle", "Venue Photo")
   };
 
   return map[category] ?? category;

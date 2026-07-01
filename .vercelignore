@@ -1,0 +1,12 @@
+.git
+.next
+.next-broken-*
+.env
+.env.local
+coverage
+data
+dist
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

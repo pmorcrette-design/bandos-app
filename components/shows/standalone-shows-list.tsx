@@ -22,15 +22,34 @@ import { useBandosUIStore } from "@/store/ui-store";
 
 export function StandaloneShowsList({
   currency,
-  locale
+  locale,
+  showDemoData
 }: {
   currency: SupportedCurrency;
   locale: Locale;
+  showDemoData: boolean;
 }) {
   const hiddenStandaloneShowIds = useBandosUIStore(
     (state) => state.hiddenStandaloneShowIds
   );
   const hideStandaloneShow = useBandosUIStore((state) => state.hideStandaloneShow);
+
+  if (!showDemoData) {
+    return (
+      <EmptyState
+        title={t(
+          locale,
+          "Aucune date hors tournée dans ce workspace",
+          "No standalone dates in this workspace"
+        )}
+        body={t(
+          locale,
+          "Ce compte démarre vierge. Les dates visibles ici viendront uniquement de tes imports ou de tes futurs ajouts.",
+          "This account starts blank. Any dates shown here will only come from your imports or future additions."
+        )}
+      />
+    );
+  }
 
   const visibleShows = shows.filter((show) => !hiddenStandaloneShowIds.includes(show.id));
 

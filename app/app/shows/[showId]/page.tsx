@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getSessionUser } from "@/lib/auth/session";
 import { t, translateShowStatus } from "@/lib/i18n";
 import { getShowById } from "@/lib/mock-data";
 import { getCurrencyPreference, getLocalePreference } from "@/lib/preferences";
@@ -18,11 +19,14 @@ export default async function ShowDetailPage({
   params: Promise<{ showId: string }>;
 }) {
   const { showId } = await params;
+  const [currencyPreference, locale, session] = await Promise.all([
+    getCurrencyPreference(),
+    getLocalePreference(),
+    getSessionUser()
+  ]);
   const show = getShowById(showId);
-  const currencyPreference = await getCurrencyPreference();
-  const locale = await getLocalePreference();
 
-  if (!show) {
+  if (!show || !session?.isDemoWorkspace) {
     notFound();
   }
 

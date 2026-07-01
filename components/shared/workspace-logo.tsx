@@ -9,8 +9,8 @@ const sizeClasses = {
 } as const;
 
 export function WorkspaceLogo({
-  src = "/widespread-disease-logo.jpg",
-  alt = "Widespread Disease logo",
+  src = "/bandos-mark.svg",
+  alt = "BandOS workspace logo",
   size = "md",
   className,
   priority = false

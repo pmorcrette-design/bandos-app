@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Users, Volume2, Trash2 } from "lucide-react";
+import { Plus, Volume2, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,6 @@ const emptyDraft = {
 
 export function TeamRosterView({ locale }: { locale: Locale }) {
   const teamRoster = useBandosUIStore((state) => state.teamRoster);
-  const loadDemoTeamRoster = useBandosUIStore((state) => state.loadDemoTeamRoster);
   const addTeamMember = useBandosUIStore((state) => state.addTeamMember);
   const updateTeamMember = useBandosUIStore((state) => state.updateTeamMember);
   const deleteTeamMember = useBandosUIStore((state) => state.deleteTeamMember);
@@ -159,17 +158,11 @@ export function TeamRosterView({ locale }: { locale: Locale }) {
                 "Add the touring team, then assign the sound engineer directly on each show."
               )}
             </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="secondary" onClick={loadDemoTeamRoster}>
-              <Users className="h-4 w-4" />
-              {t(locale, "Charger l'équipe WIDESPREAD DISEASE", "Load WIDESPREAD DISEASE team")}
-            </Button>
-            <Button type="button" onClick={openCreateModal}>
-              <Plus className="h-4 w-4" />
-              {t(locale, "Ajouter un membre", "Add member")}
-            </Button>
-          </div>
+        </div>
+        <Button type="button" onClick={openCreateModal}>
+          <Plus className="h-4 w-4" />
+          {t(locale, "Ajouter un membre", "Add member")}
+        </Button>
         </Card>
 
         <Card className="grid gap-4 md:grid-cols-3">

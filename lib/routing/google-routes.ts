@@ -122,6 +122,8 @@ export async function computeGoogleRoute(
 
       return {
         index,
+        fromPointId: from.id,
+        toPointId: to.id,
         from: from.label,
         to: to.label,
         distanceMeters: leg.distanceMeters ?? 0,

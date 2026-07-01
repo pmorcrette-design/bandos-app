@@ -31,7 +31,7 @@ export function Topbar({
   const navigationItems = getNavigationItems(locale);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-shell-topbar="true">
       <div className="rounded-[28px] border border-white/8 bg-black/25 px-4 py-4 shadow-card backdrop-blur-2xl sm:px-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">

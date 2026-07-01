@@ -5,8 +5,8 @@ export function RouteMap({
   compact = false,
   className,
   locale = "en",
-  title = "London to Sheffield",
-  distanceLabel = "1,046 km mapped",
+  title,
+  distanceLabel,
   stops = []
 }: {
   compact?: boolean;
@@ -35,9 +35,11 @@ export function RouteMap({
             <p className="text-xs uppercase tracking-[0.24em] text-mist-300">
               {t(locale, "Vue de route", "Route overview")}
             </p>
-            <h3 className="mt-2 text-xl font-semibold text-mist-50">{title}</h3>
+            <h3 className="mt-2 text-xl font-semibold text-mist-50">
+              {title || t(locale, "Plan de tournée", "Tour routing plan")}
+            </h3>
           </div>
-          {!compact ? (
+          {!compact && distanceLabel ? (
             <div className="rounded-full border border-coral-500/20 bg-coral-500/10 px-3 py-1 text-xs text-coral-300">
               {distanceLabel}
             </div>
