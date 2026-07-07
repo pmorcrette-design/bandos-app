@@ -5,6 +5,7 @@ import {
   teamMembers as defaultTeamMembers,
   tourProviders as defaultTourProviders,
   type CrmContact,
+  type MerchProductType,
   type MerchProduct,
   type TaskItem,
   type TeamMember
@@ -194,6 +195,62 @@ export type TourVehicleAssignment = {
   updatedAt: string;
 };
 
+export type MerchDesignCollection =
+  | "tour"
+  | "album"
+  | "single"
+  | "special drop"
+  | "evergreen";
+
+export type MerchDesignStatus = "draft" | "active" | "archived";
+
+export type MerchDesign = {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  collection: MerchDesignCollection;
+  status: MerchDesignStatus;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+  productTypes: MerchProductType[];
+};
+
+export type MerchPurchaseOrderStatus =
+  | "draft"
+  | "sent"
+  | "confirmed"
+  | "delivered";
+
+export type MerchPurchaseOrderLine = {
+  id: string;
+  productId: string | null;
+  productName: string;
+  designId: string | null;
+  designName: string;
+  productType: MerchProductType;
+  size: string;
+  quantity: number;
+  unitCost: number;
+  lineTotal: number;
+};
+
+export type MerchPurchaseOrder = {
+  id: string;
+  poNumber: string;
+  date: string;
+  supplier: string;
+  workspaceName: string;
+  currency: SupportedCurrency;
+  status: MerchPurchaseOrderStatus;
+  notes: string;
+  sourceForecastLabel: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lines: MerchPurchaseOrderLine[];
+};
+
 export type EditableMerchProduct = MerchProduct;
 export type EditableTeamMember = TeamMember;
 export type EditableTaskItem = TaskItem;
@@ -273,6 +330,8 @@ export type BandosWorkspaceData = {
   vehicleCatalog: VehicleCatalogItem[];
   tourVehicleAssignments: TourVehicleAssignment[];
   merchCatalog: EditableMerchProduct[];
+  merchDesigns: MerchDesign[];
+  merchPurchaseOrders: MerchPurchaseOrder[];
   workspaceTasks: EditableTaskItem[];
   uploadedDocuments: UploadedDocumentEntry[];
   epkProfile: EpkProfile;
@@ -733,12 +792,26 @@ export function normalizeEditableMerchProduct(
     typeof product.reorderPoint === "number" && product.reorderPoint >= 0
       ? Math.floor(product.reorderPoint)
       : 0;
+  const productType =
+    product.productType === "t-shirt" ||
+    product.productType === "hoodie" ||
+    product.productType === "longsleeve" ||
+    product.productType === "patch" ||
+    product.productType === "poster" ||
+    product.productType === "vinyl" ||
+    product.productType === "cd" ||
+    product.productType === "other"
+      ? product.productType
+      : "other";
 
   return {
     id: product.id,
     sku: product.sku ?? "MERCH-SKU",
     name: product.name ?? "New merch item",
     category: product.category ?? "Accessory",
+    productType,
+    designId: product.designId?.trim() || null,
+    color: product.color?.trim() || "Black",
     supplier: product.supplier ?? "Manual entry",
     variants: product.variants?.length ? product.variants : ["Standard"],
     sizes: product.sizes?.length ? product.sizes : ["N/A"],
@@ -762,7 +835,110 @@ export function normalizeEditableMerchProduct(
     alert: stock <= reorderPoint ? "Manual stock watch" : null,
     location: product.location ?? "Merch case",
     lastRestockDate: product.lastRestockDate ?? new Date().toISOString().slice(0, 10),
-    sumupCatalogName: product.sumupCatalogName ?? "Pending SumUp sync"
+    sumupCatalogName: product.sumupCatalogName ?? "Pending SumUp sync",
+    sumupSku: product.sumupSku?.trim() || null
+  };
+}
+
+export function normalizeMerchDesign(
+  design: Partial<MerchDesign> & Pick<MerchDesign, "id">
+): MerchDesign {
+  const now = new Date().toISOString();
+
+  return {
+    id: design.id,
+    name: design.name?.trim() || "Untitled design",
+    description: design.description?.trim() || "",
+    imageUrl: design.imageUrl?.trim() || null,
+    collection:
+      design.collection === "tour" ||
+      design.collection === "album" ||
+      design.collection === "single" ||
+      design.collection === "special drop" ||
+      design.collection === "evergreen"
+        ? design.collection
+        : "evergreen",
+    status:
+      design.status === "draft" ||
+      design.status === "active" ||
+      design.status === "archived"
+        ? design.status
+        : "draft",
+    createdAt: design.createdAt ?? now,
+    updatedAt: design.updatedAt ?? now,
+    tags:
+      design.tags?.map((tag) => tag.trim()).filter(Boolean).slice(0, 12) ?? [],
+    productTypes:
+      design.productTypes?.filter(
+        (type): type is MerchProductType =>
+          type === "t-shirt" ||
+          type === "hoodie" ||
+          type === "longsleeve" ||
+          type === "patch" ||
+          type === "poster" ||
+          type === "vinyl" ||
+          type === "cd" ||
+          type === "other"
+      ) ?? []
+  };
+}
+
+export function normalizeMerchPurchaseOrderLine(
+  line: Partial<MerchPurchaseOrderLine> & Pick<MerchPurchaseOrderLine, "id">
+): MerchPurchaseOrderLine {
+  const quantity =
+    typeof line.quantity === "number" && line.quantity >= 0 ? Math.floor(line.quantity) : 0;
+  const unitCost =
+    typeof line.unitCost === "number" && line.unitCost >= 0 ? line.unitCost : 0;
+
+  return {
+    id: line.id,
+    productId: line.productId?.trim() || null,
+    productName: line.productName?.trim() || "Untitled product",
+    designId: line.designId?.trim() || null,
+    designName: line.designName?.trim() || "No design",
+    productType:
+      line.productType === "t-shirt" ||
+      line.productType === "hoodie" ||
+      line.productType === "longsleeve" ||
+      line.productType === "patch" ||
+      line.productType === "poster" ||
+      line.productType === "vinyl" ||
+      line.productType === "cd" ||
+      line.productType === "other"
+        ? line.productType
+        : "other",
+    size: line.size?.trim() || "N/A",
+    quantity,
+    unitCost,
+    lineTotal: quantity * unitCost
+  };
+}
+
+export function normalizeMerchPurchaseOrder(
+  order: Partial<MerchPurchaseOrder> & Pick<MerchPurchaseOrder, "id">
+): MerchPurchaseOrder {
+  const now = new Date().toISOString();
+
+  return {
+    id: order.id,
+    poNumber: order.poNumber?.trim() || `PO-${Date.now()}`,
+    date: order.date?.trim() || now.slice(0, 10),
+    supplier: order.supplier?.trim() || "Unknown supplier",
+    workspaceName: order.workspaceName?.trim() || "BandOS workspace",
+    currency: normalizeCurrency(order.currency),
+    status:
+      order.status === "draft" ||
+      order.status === "sent" ||
+      order.status === "confirmed" ||
+      order.status === "delivered"
+        ? order.status
+        : "draft",
+    notes: order.notes?.trim() || "",
+    sourceForecastLabel: order.sourceForecastLabel?.trim() || null,
+    createdAt: order.createdAt ?? now,
+    updatedAt: order.updatedAt ?? now,
+    lines: order.lines?.map((line) => normalizeMerchPurchaseOrderLine(line)) ?? []
   };
 }
 
@@ -1100,6 +1276,50 @@ export function buildDefaultVehicleCatalog() {
   );
 }
 
+export function buildDefaultMerchDesigns() {
+  return [
+    normalizeMerchDesign({
+      id: "design-concrete-sigil",
+      name: "Concrete Sigil",
+      description:
+        "Main touring chest print used across tees and support-run merch.",
+      imageUrl: null,
+      collection: "tour",
+      status: "active",
+      createdAt: "2026-04-10T09:00:00.000Z",
+      updatedAt: "2026-04-10T09:00:00.000Z",
+      tags: ["logo", "tour design", "limited edition"],
+      productTypes: ["t-shirt", "hoodie", "poster"]
+    }),
+    normalizeMerchDesign({
+      id: "design-ashes-route",
+      name: "Ashes Route",
+      description:
+        "Backprint route visual for headline runs, better for apparel than patches.",
+      imageUrl: null,
+      collection: "tour",
+      status: "active",
+      createdAt: "2026-04-14T12:00:00.000Z",
+      updatedAt: "2026-04-14T12:00:00.000Z",
+      tags: ["backprint", "tour design", "brutal"],
+      productTypes: ["longsleeve", "t-shirt"]
+    }),
+    normalizeMerchDesign({
+      id: "design-logo-evergreen",
+      name: "Logo Evergreen",
+      description:
+        "Simple logo design that stays safe for support tours and evergreen items.",
+      imageUrl: null,
+      collection: "evergreen",
+      status: "active",
+      createdAt: "2026-03-01T10:00:00.000Z",
+      updatedAt: "2026-03-01T10:00:00.000Z",
+      tags: ["logo", "evergreen", "safe seller"],
+      productTypes: ["patch", "vinyl", "cd"]
+    })
+  ];
+}
+
 export function buildInitialWorkspaceData(): BandosWorkspaceData {
   return {
     importedShowFolders: [],
@@ -1113,6 +1333,8 @@ export function buildInitialWorkspaceData(): BandosWorkspaceData {
     merchCatalog: defaultMerchProducts.map((product) =>
       normalizeEditableMerchProduct(product)
     ),
+    merchDesigns: buildDefaultMerchDesigns(),
+    merchPurchaseOrders: [],
     workspaceTasks: defaultTasks.map((task) => normalizeEditableTaskItem(task)),
     uploadedDocuments: [],
     epkProfile: buildEmptyEpkProfile()
@@ -1128,6 +1350,8 @@ export function buildEmptyWorkspaceData(): BandosWorkspaceData {
     vehicleCatalog: [],
     tourVehicleAssignments: [],
     merchCatalog: [],
+    merchDesigns: [],
+    merchPurchaseOrders: [],
     workspaceTasks: [],
     uploadedDocuments: [],
     epkProfile: buildEmptyEpkProfile()
@@ -1166,6 +1390,14 @@ export function normalizeWorkspaceData(
       snapshot?.merchCatalog?.map((product) =>
         normalizeEditableMerchProduct(product)
       ) ?? initial.merchCatalog,
+    merchDesigns:
+      snapshot?.merchDesigns?.map((design) =>
+        normalizeMerchDesign(design)
+      ) ?? initial.merchDesigns,
+    merchPurchaseOrders:
+      snapshot?.merchPurchaseOrders?.map((order) =>
+        normalizeMerchPurchaseOrder(order)
+      ) ?? initial.merchPurchaseOrders,
     workspaceTasks:
       snapshot?.workspaceTasks?.map((task) =>
         normalizeEditableTaskItem(task)

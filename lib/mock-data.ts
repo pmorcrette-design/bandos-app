@@ -141,11 +141,24 @@ export type FinanceEntry = {
   date: string;
 };
 
+export type MerchProductType =
+  | "t-shirt"
+  | "hoodie"
+  | "longsleeve"
+  | "patch"
+  | "poster"
+  | "vinyl"
+  | "cd"
+  | "other";
+
 export type MerchProduct = {
   id: string;
   sku: string;
   name: string;
   category: string;
+  productType: MerchProductType;
+  designId: string | null;
+  color: string;
   supplier: string;
   variants: string[];
   sizes: string[];
@@ -164,6 +177,7 @@ export type MerchProduct = {
   location: string;
   lastRestockDate: string;
   sumupCatalogName: string;
+  sumupSku: string | null;
 };
 
 export type TaskItem = {
@@ -988,6 +1002,9 @@ export const merchProducts: MerchProduct[] = [
     sku: "WD-TEE-TOUR-2026",
     name: "Widespread Disease Tour Tee",
     category: "Apparel",
+    productType: "t-shirt",
+    designId: "design-concrete-sigil",
+    color: "Black",
     supplier: "Night Shift Print Co.",
     variants: ["Black", "Stone"],
     sizes: ["S", "M", "L", "XL"],
@@ -1007,13 +1024,17 @@ export const merchProducts: MerchProduct[] = [
     alert: null,
     location: "Van Case A",
     lastRestockDate: "2026-05-08",
-    sumupCatalogName: "Tour Tee"
+    sumupCatalogName: "Tour Tee",
+    sumupSku: null
   },
   {
     id: "merch-longsleeve",
     sku: "WD-LS-NORTHBOUND",
     name: "Northbound Longsleeve",
     category: "Apparel",
+    productType: "longsleeve",
+    designId: "design-ashes-route",
+    color: "Washed Charcoal",
     supplier: "Night Shift Print Co.",
     variants: ["Washed Charcoal"],
     sizes: ["M", "L", "XL"],
@@ -1032,13 +1053,17 @@ export const merchProducts: MerchProduct[] = [
     alert: "Low stock alert",
     location: "Van Case B",
     lastRestockDate: "2026-05-02",
-    sumupCatalogName: "Northbound Longsleeve"
+    sumupCatalogName: "Northbound Longsleeve",
+    sumupSku: null
   },
   {
     id: "merch-vinyl",
     sku: "WD-SPLIT12-SEASMOKE",
     name: "Widespread Disease Split 12\"",
     category: "Physical",
+    productType: "vinyl",
+    designId: "design-logo-evergreen",
+    color: "Sea Smoke",
     supplier: "Cold Harbour Pressing",
     variants: ["Sea Smoke"],
     sizes: ["N/A"],
@@ -1053,13 +1078,17 @@ export const merchProducts: MerchProduct[] = [
     alert: null,
     location: "Merch Trunk",
     lastRestockDate: "2026-04-28",
-    sumupCatalogName: "Split 12 Vinyl"
+    sumupCatalogName: "Split 12 Vinyl",
+    sumupSku: null
   },
   {
     id: "merch-patch",
     sku: "WD-PATCH-RED-BONE",
     name: "BandOS Patch Mock",
     category: "Accessory",
+    productType: "patch",
+    designId: "design-logo-evergreen",
+    color: "Red / Bone",
     supplier: "Dead Thread Embroidery",
     variants: ["Red / Bone"],
     sizes: ["N/A"],
@@ -1074,7 +1103,8 @@ export const merchProducts: MerchProduct[] = [
     alert: "Reorder before Glasgow",
     location: "Drawer Pouch",
     lastRestockDate: "2026-04-20",
-    sumupCatalogName: "Logo Patch"
+    sumupCatalogName: "Logo Patch",
+    sumupSku: null
   }
 ];
 

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:merch-forecast": "rm -rf .tmp-tests && ./node_modules/.bin/tsc --module commonjs --moduleResolution node --target ES2022 --outDir .tmp-tests tests/merch-forecast.test.ts lib/merch-forecast.ts lib/mock-data.ts lib/utils.ts && node --test .tmp-tests/tests/merch-forecast.test.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"
   },

@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   Package2,
   Plus,
   RefreshCw,
@@ -11,11 +13,13 @@ import {
 } from "lucide-react";
 
 import { SumUpConnectionCard } from "@/components/integrations/sumup-connection-card";
+import { MerchDesignsManager } from "@/components/merch/merch-designs-manager";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonStyles } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { t, translateMerchCategory, type Locale } from "@/lib/i18n";
 import type { SumUpConnectionStatus } from "@/lib/integrations/sumup";
 import {
@@ -32,6 +36,17 @@ function parseNumericInput(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+const productTypeOptions = [
+  "t-shirt",
+  "hoodie",
+  "longsleeve",
+  "patch",
+  "poster",
+  "vinyl",
+  "cd",
+  "other"
+] as const;
+
 export function MerchManagerView({
   currency,
   locale,
@@ -42,6 +57,7 @@ export function MerchManagerView({
   sumupStatus: SumUpConnectionStatus;
 }) {
   const merchCatalog = useBandosUIStore((state) => state.merchCatalog);
+  const merchDesigns = useBandosUIStore((state) => state.merchDesigns);
   const addMerchProduct = useBandosUIStore((state) => state.addMerchProduct);
   const importMerchProductsFromSumUp = useBandosUIStore(
     (state) => state.importMerchProductsFromSumUp
@@ -55,6 +71,9 @@ export function MerchManagerView({
     name: "",
     sku: "",
     category: "Accessory",
+    productType: "t-shirt",
+    designId: "",
+    color: "Black",
     supplier: "Manual entry",
     location: "Merch case",
     initialStock: "25",
@@ -93,6 +112,17 @@ export function MerchManagerView({
       name: newProduct.name.trim(),
       sku: newProduct.sku.trim(),
       category: newProduct.category,
+      productType: newProduct.productType as
+        | "t-shirt"
+        | "hoodie"
+        | "longsleeve"
+        | "patch"
+        | "poster"
+        | "vinyl"
+        | "cd"
+        | "other",
+      designId: newProduct.designId || null,
+      color: newProduct.color.trim() || "Black",
       supplier: newProduct.supplier.trim() || "Manual entry",
       location: newProduct.location.trim() || "Merch case",
       initialStock: Math.max(parseNumericInput(newProduct.initialStock), 0),
@@ -106,6 +136,9 @@ export function MerchManagerView({
       name: "",
       sku: "",
       category: "Accessory",
+      productType: "t-shirt",
+      designId: "",
+      color: "Black",
       supplier: "Manual entry",
       location: "Merch case",
       initialStock: "25",
@@ -322,18 +355,27 @@ export function MerchManagerView({
                   )}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant={sumupStatus.connected ? "primary" : "secondary"}
-                onClick={importCatalogFromSumUp}
-                disabled={!sumupStatus.connected || isImportingCatalog}
-                className="min-w-[188px] shrink-0 self-start whitespace-nowrap lg:self-auto"
-              >
-                <RefreshCw className={`h-4 w-4 ${isImportingCatalog ? "animate-spin" : ""}`} />
-                {isImportingCatalog
-                  ? t(locale, "Import en cours", "Importing")
-                  : t(locale, "Importer le catalogue", "Import catalog")}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/app/merch/forecast"
+                  className={buttonStyles({ variant: "secondary" })}
+                >
+                  {t(locale, "Ouvrir Forecast", "Open Forecast")}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Button
+                  type="button"
+                  variant={sumupStatus.connected ? "primary" : "secondary"}
+                  onClick={importCatalogFromSumUp}
+                  disabled={!sumupStatus.connected || isImportingCatalog}
+                  className="min-w-[188px] shrink-0 whitespace-nowrap"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isImportingCatalog ? "animate-spin" : ""}`} />
+                  {isImportingCatalog
+                    ? t(locale, "Import en cours", "Importing")
+                    : t(locale, "Importer le catalogue", "Import catalog")}
+                </Button>
+              </div>
             </div>
 
             {importMessage ? (
@@ -367,6 +409,48 @@ export function MerchManagerView({
                 }
                 placeholder="SKU"
               />
+              <div className="grid gap-3 md:grid-cols-3">
+                <Select
+                  value={newProduct.productType}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      productType: event.target.value
+                    }))
+                  }
+                >
+                  {productTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  value={newProduct.designId}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({
+                      ...current,
+                      designId: event.target.value
+                    }))
+                  }
+                >
+                  <option value="">{t(locale, "Sans design", "No design")}</option>
+                  {merchDesigns
+                    .filter((design) => design.status !== "archived")
+                    .map((design) => (
+                      <option key={design.id} value={design.id}>
+                        {design.name}
+                      </option>
+                    ))}
+                </Select>
+                <Input
+                  value={newProduct.color}
+                  onChange={(event) =>
+                    setNewProduct((current) => ({ ...current, color: event.target.value }))
+                  }
+                  placeholder={t(locale, "Couleur", "Color")}
+                />
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input
                   value={newProduct.location}
@@ -493,6 +577,8 @@ export function MerchManagerView({
         </div>
       </div>
 
+      <MerchDesignsManager locale={locale} />
+
       {merchCatalog.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
           {merchCatalog.map((product) => {
@@ -514,7 +600,8 @@ export function MerchManagerView({
                       </Badge>
                     </div>
                     <p className="mt-2 text-sm text-mist-300">
-                      {translateMerchCategory(locale, product.category)} • {product.supplier}
+                      {translateMerchCategory(locale, product.category)} • {product.productType} •{" "}
+                      {product.supplier}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -547,6 +634,70 @@ export function MerchManagerView({
                       defaultValue={product.sku}
                       onBlur={(event) =>
                         updateMerchProduct(product.id, { sku: event.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                  <label className="space-y-2">
+                    <span className="text-sm text-mist-200">
+                      {t(locale, "Type produit", "Product type")}
+                    </span>
+                    <Select
+                      defaultValue={product.productType}
+                      onBlur={(event) =>
+                        updateMerchProduct(product.id, {
+                          productType: event.currentTarget.value as typeof product.productType
+                        })
+                      }
+                    >
+                      {productTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-mist-200">
+                      {t(locale, "Design lié", "Linked design")}
+                    </span>
+                    <Select
+                      defaultValue={product.designId ?? ""}
+                      onBlur={(event) =>
+                        updateMerchProduct(product.id, {
+                          designId: event.currentTarget.value || null
+                        })
+                      }
+                    >
+                      <option value="">{t(locale, "Sans design", "No design")}</option>
+                      {merchDesigns.map((design) => (
+                        <option key={design.id} value={design.id}>
+                          {design.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-mist-200">
+                      {t(locale, "Couleur", "Color")}
+                    </span>
+                    <Input
+                      defaultValue={product.color}
+                      onBlur={(event) =>
+                        updateMerchProduct(product.id, { color: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-mist-200">SumUp mapping</span>
+                    <Input
+                      defaultValue={product.sumupCatalogName}
+                      onBlur={(event) =>
+                        updateMerchProduct(product.id, {
+                          sumupCatalogName: event.target.value
+                        })
                       }
                     />
                   </label>

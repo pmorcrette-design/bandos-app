@@ -33,6 +33,20 @@ export type SumUpCatalogImportItem = {
   vatRate: number | null;
 };
 
+export type SumUpMerchSaleLine = {
+  id: string;
+  transactionId: string;
+  soldAt: string | null;
+  productName: string;
+  normalizedProductName: string;
+  detectedSize: string | null;
+  quantity: number;
+  salePrice: number;
+  revenue: number;
+  currency: SupportedCurrency;
+  vatRate: number | null;
+};
+
 export type SumUpConnectionStatus = {
   configured: boolean;
   connected: boolean;
@@ -108,6 +122,26 @@ function normalizeTransaction(record: Record<string, unknown>): SumUpTransaction
 function parseNumber(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeMerchLookupValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function detectMerchSize(name: string) {
+  const normalized = normalizeMerchLookupValue(name)
+    .replace(/\bextra large\b/g, "xl")
+    .replace(/\bdouble xl\b/g, "2xl")
+    .replace(/\btriple xl\b/g, "3xl");
+  const match = normalized.match(
+    /(?:^|[\s/-])(3xl|2xl|xl|xs|xxl|s|m|l)(?:$|[\s/-])/
+  );
+
+  if (!match?.[1]) {
+    return null;
+  }
+
+  return match[1].toUpperCase();
 }
 
 function normalizeTransactionProducts(record: Record<string, unknown>) {
@@ -252,6 +286,67 @@ export async function getSumUpCatalogImportItems(): Promise<SumUpCatalogImportIt
   return Array.from(products.values()).sort((left, right) =>
     right.quantitySold - left.quantitySold
   );
+}
+
+export async function getSumUpMerchSalesHistory(): Promise<SumUpMerchSaleLine[]> {
+  const { apiKey, merchantCode } = getSumUpConfig();
+
+  if (!apiKey || !merchantCode) {
+    return [];
+  }
+
+  const transactions = await listRecentSumUpTransactions(merchantCode, apiKey);
+  const lines: SumUpMerchSaleLine[] = [];
+
+  for (const transaction of transactions) {
+    const transactionId = String(
+      transaction.transaction_code ?? transaction.id ?? crypto.randomUUID()
+    );
+    const soldAt =
+      typeof transaction.timestamp === "string"
+        ? transaction.timestamp
+        : typeof transaction.transaction_time === "string"
+          ? transaction.transaction_time
+          : typeof transaction.local_time === "string"
+            ? transaction.local_time
+            : null;
+
+    normalizeTransactionProducts(transaction).forEach((product, index) => {
+      if (ignoredProductSummaries.has(product.name.trim().toLowerCase())) {
+        return;
+      }
+
+      lines.push({
+        id: `${transactionId}-${index}-${normalizeMerchLookupValue(product.name).replace(/[^a-z0-9]+/g, "-")}`,
+        transactionId,
+        soldAt,
+        productName: product.name,
+        normalizedProductName: normalizeMerchLookupValue(product.name),
+        detectedSize: detectMerchSize(product.name),
+        quantity: product.quantity,
+        salePrice: convertCurrency(product.salePrice, product.currency, "GBP"),
+        revenue: convertCurrency(product.totalRevenue, product.currency, "GBP"),
+        currency: "GBP",
+        vatRate: product.vatRate
+      });
+    });
+  }
+
+  return lines.sort((left, right) => {
+    if (!left.soldAt && !right.soldAt) {
+      return 0;
+    }
+
+    if (!left.soldAt) {
+      return 1;
+    }
+
+    if (!right.soldAt) {
+      return -1;
+    }
+
+    return right.soldAt.localeCompare(left.soldAt);
+  });
 }
 
 export async function getSumUpConnectionStatus(): Promise<SumUpConnectionStatus> {

@@ -11,6 +11,8 @@ import {
   normalizeEditableCrmContact,
   normalizeEpkProfile,
   normalizeEditableMerchProduct,
+  normalizeMerchDesign,
+  normalizeMerchPurchaseOrder,
   normalizeEditableTaskItem,
   normalizeEditableTeamMember,
   normalizeImportedShowFolder,
@@ -24,6 +26,8 @@ import {
   type EditableCrmContact,
   type EpkProfile,
   type EditableMerchProduct,
+  type MerchDesign,
+  type MerchPurchaseOrder,
   type EditableTaskItem,
   type EditableTeamMember,
   type ImportedShowFolder,
@@ -36,6 +40,8 @@ export type {
   EditableCrmContact,
   EpkProfile,
   EditableMerchProduct,
+  MerchDesign,
+  MerchPurchaseOrder,
   EditableTaskItem,
   EditableTeamMember,
   ImportedLocalAct,
@@ -155,6 +161,9 @@ type BandosUIState = BandosWorkspaceData & {
     name: string;
     sku: string;
     category: string;
+    productType: EditableMerchProduct["productType"];
+    designId: string | null;
+    color: string;
     supplier: string;
     location: string;
     initialStock: number;
@@ -171,6 +180,9 @@ type BandosUIState = BandosWorkspaceData & {
         | "name"
         | "sku"
         | "category"
+        | "productType"
+        | "designId"
+        | "color"
         | "supplier"
         | "location"
         | "initialStock"
@@ -178,6 +190,8 @@ type BandosUIState = BandosWorkspaceData & {
         | "purchasePrice"
         | "salePrice"
         | "reorderPoint"
+        | "sumupCatalogName"
+        | "sumupSku"
       >
     >
   ) => void;
@@ -193,6 +207,24 @@ type BandosUIState = BandosWorkspaceData & {
     created: number;
     updated: number;
   };
+  addMerchDesign: (
+    payload: Omit<MerchDesign, "id" | "createdAt" | "updatedAt">
+  ) => void;
+  updateMerchDesign: (
+    id: string,
+    patch: Partial<Omit<MerchDesign, "id" | "createdAt">>
+  ) => void;
+  archiveMerchDesign: (id: string) => void;
+  saveMerchPurchaseOrder: (
+    payload: Omit<MerchPurchaseOrder, "updatedAt" | "createdAt"> & {
+      createdAt?: string;
+    }
+  ) => void;
+  updateMerchPurchaseOrder: (
+    id: string,
+    patch: Partial<Omit<MerchPurchaseOrder, "id" | "createdAt">>
+  ) => void;
+  deleteMerchPurchaseOrder: (id: string) => void;
   addUploadedDocuments: (
     entries: Array<
       Partial<BandosUIState["uploadedDocuments"][number]> & {
@@ -294,6 +326,42 @@ function guessMerchCategory(name: string): EditableMerchProduct["category"] {
   return "Accessory";
 }
 
+function guessMerchProductType(
+  name: string
+): EditableMerchProduct["productType"] {
+  const normalized = normalizeMerchLookupValue(name);
+
+  if (normalized.includes("hoodie")) {
+    return "hoodie";
+  }
+
+  if (normalized.includes("longsleeve") || normalized.includes("long sleeve")) {
+    return "longsleeve";
+  }
+
+  if (normalized.includes("tee") || normalized.includes("shirt")) {
+    return "t-shirt";
+  }
+
+  if (normalized.includes("patch")) {
+    return "patch";
+  }
+
+  if (normalized.includes("poster")) {
+    return "poster";
+  }
+
+  if (normalized.includes("vinyl")) {
+    return "vinyl";
+  }
+
+  if (normalized.includes("cd")) {
+    return "cd";
+  }
+
+  return "other";
+}
+
 function getInitialState() {
   return {
     initializedWorkspaceId: null,
@@ -314,6 +382,8 @@ export const getWorkspaceDataSnapshot = (state: BandosUIState) => ({
   vehicleCatalog: state.vehicleCatalog,
   tourVehicleAssignments: state.tourVehicleAssignments,
   merchCatalog: state.merchCatalog,
+  merchDesigns: state.merchDesigns,
+  merchPurchaseOrders: state.merchPurchaseOrders,
   workspaceTasks: state.workspaceTasks,
   uploadedDocuments: state.uploadedDocuments,
   epkProfile: state.epkProfile
@@ -883,6 +953,9 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
           name: payload.name,
           sku: payload.sku,
           category: payload.category,
+          productType: payload.productType,
+          designId: payload.designId,
+          color: payload.color,
           supplier: payload.supplier,
           location: payload.location,
           initialStock: payload.initialStock,
@@ -893,7 +966,8 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
           variants: ["Standard"],
           sizes: ["N/A"],
           sizeBreakdown: [{ size: "N/A", remaining: payload.stock }],
-          sumupCatalogName: "Pending SumUp sync"
+          sumupCatalogName: "Pending SumUp sync",
+          sumupSku: null
         }),
         ...state.merchCatalog
       ]
@@ -969,6 +1043,9 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
             sku: generatedSku,
             name: item.name,
             category: guessMerchCategory(item.name),
+            productType: guessMerchProductType(item.name),
+            designId: null,
+            color: "Black",
             supplier: "SumUp import",
             variants: ["Standard"],
             sizes: ["N/A"],
@@ -981,7 +1058,8 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
             alert: null,
             location: "Manual stock",
             lastRestockDate: today,
-            sumupCatalogName: item.name
+            sumupCatalogName: item.name,
+            sumupSku: null
           })
         );
       });
@@ -993,6 +1071,81 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
 
     return { created, updated };
   },
+  addMerchDesign: (payload) =>
+    set((state) => ({
+      merchDesigns: [
+        normalizeMerchDesign({
+          id: buildClientEntityId("merch-design"),
+          ...payload,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }),
+        ...state.merchDesigns
+      ]
+    })),
+  updateMerchDesign: (id, patch) =>
+    set((state) => ({
+      merchDesigns: state.merchDesigns.map((design) =>
+        design.id === id
+          ? normalizeMerchDesign({
+              ...design,
+              ...patch,
+              updatedAt: new Date().toISOString()
+            })
+          : design
+      )
+    })),
+  archiveMerchDesign: (id) =>
+    set((state) => ({
+      merchDesigns: state.merchDesigns.map((design) =>
+        design.id === id
+          ? normalizeMerchDesign({
+              ...design,
+              status: "archived",
+              updatedAt: new Date().toISOString()
+            })
+          : design
+      )
+    })),
+  saveMerchPurchaseOrder: (payload) =>
+    set((state) => {
+      const existingIndex = state.merchPurchaseOrders.findIndex(
+        (order) => order.id === payload.id
+      );
+      const normalizedOrder = normalizeMerchPurchaseOrder({
+        ...payload,
+        createdAt: payload.createdAt ?? new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      if (existingIndex < 0) {
+        return {
+          merchPurchaseOrders: [normalizedOrder, ...state.merchPurchaseOrders]
+        };
+      }
+
+      return {
+        merchPurchaseOrders: state.merchPurchaseOrders.map((order) =>
+          order.id === payload.id ? normalizedOrder : order
+        )
+      };
+    }),
+  updateMerchPurchaseOrder: (id, patch) =>
+    set((state) => ({
+      merchPurchaseOrders: state.merchPurchaseOrders.map((order) =>
+        order.id === id
+          ? normalizeMerchPurchaseOrder({
+              ...order,
+              ...patch,
+              updatedAt: new Date().toISOString()
+            })
+          : order
+      )
+    })),
+  deleteMerchPurchaseOrder: (id) =>
+    set((state) => ({
+      merchPurchaseOrders: state.merchPurchaseOrders.filter((order) => order.id !== id)
+    })),
   addUploadedDocuments: (entries) =>
     set((state) => ({
       uploadedDocuments: [
