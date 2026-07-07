@@ -749,7 +749,8 @@ export function MerchForecastView({
             </p>
           </div>
           <div className="mt-5 overflow-hidden rounded-[24px] border border-white/8">
-            <div className="grid grid-cols-[1.8fr_0.8fr_0.8fr_0.8fr_0.7fr] gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-3 text-xs uppercase tracking-[0.22em] text-mist-300">
+            <div className="overflow-x-auto">
+            <div className="grid min-w-[680px] grid-cols-[1.8fr_0.8fr_0.8fr_0.8fr_0.7fr] gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-3 text-xs uppercase tracking-[0.22em] text-mist-300">
               <p>{t(locale, "Produit", "Product")}</p>
               <p>{t(locale, "Design", "Design")}</p>
               <p>{t(locale, "Unités", "Units")}</p>
@@ -760,7 +761,7 @@ export function MerchForecastView({
               {filteredAnalyticsProducts.slice(0, 8).map((product) => (
                 <div
                   key={`${product.productId ?? product.productName}`}
-                  className="grid grid-cols-[1.8fr_0.8fr_0.8fr_0.8fr_0.7fr] gap-3 px-4 py-4 text-sm"
+                  className="grid min-w-[680px] grid-cols-[1.8fr_0.8fr_0.8fr_0.8fr_0.7fr] gap-3 px-4 py-4 text-sm"
                 >
                   <div>
                     <p className="font-medium text-mist-50">{product.productName}</p>
@@ -776,6 +777,7 @@ export function MerchForecastView({
                   </p>
                 </div>
               ))}
+            </div>
             </div>
           </div>
         </Card>
@@ -1217,7 +1219,8 @@ export function MerchForecastView({
                   />
 
                   <div className="mt-4 overflow-hidden rounded-[24px] border border-white/8">
-                    <div className="grid grid-cols-[1.4fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-3 text-xs uppercase tracking-[0.22em] text-mist-300">
+                    <div className="overflow-x-auto">
+                    <div className="grid min-w-[640px] grid-cols-[1.4fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 border-b border-white/8 bg-white/[0.03] px-4 py-3 text-xs uppercase tracking-[0.22em] text-mist-300">
                       <p>{t(locale, "Produit", "Product")}</p>
                       <p>{t(locale, "Design", "Design")}</p>
                       <p>{t(locale, "Taille", "Size")}</p>
@@ -1228,7 +1231,7 @@ export function MerchForecastView({
                       {currentOrder.lines.map((line) => (
                         <div
                           key={line.id}
-                          className="grid grid-cols-[1.4fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 px-4 py-4 text-sm"
+                          className="grid min-w-[640px] grid-cols-[1.4fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 px-4 py-4 text-sm"
                         >
                           <div>
                             <p className="font-medium text-mist-50">{line.productName}</p>
@@ -1256,6 +1259,7 @@ export function MerchForecastView({
                           />
                         </div>
                       ))}
+                    </div>
                     </div>
                   </div>
 

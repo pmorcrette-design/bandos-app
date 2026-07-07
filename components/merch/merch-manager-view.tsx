@@ -368,7 +368,7 @@ export function MerchManagerView({
                   variant={sumupStatus.connected ? "primary" : "secondary"}
                   onClick={importCatalogFromSumUp}
                   disabled={!sumupStatus.connected || isImportingCatalog}
-                  className="min-w-[188px] shrink-0 whitespace-nowrap"
+                  className="w-full whitespace-nowrap sm:min-w-[188px] sm:w-auto"
                 >
                   <RefreshCw className={`h-4 w-4 ${isImportingCatalog ? "animate-spin" : ""}`} />
                   {isImportingCatalog

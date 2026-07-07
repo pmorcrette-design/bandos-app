@@ -118,9 +118,9 @@ export function CommandPalette({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 py-24 backdrop-blur-sm">
-      <div className="w-full max-w-2xl overflow-hidden rounded-[30px] border border-white/10 bg-graphite-950 shadow-shell">
-        <div className="flex items-center gap-3 border-b border-white/8 px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-3 py-12 backdrop-blur-sm sm:px-4 sm:py-24">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/10 bg-graphite-950 shadow-shell sm:rounded-[30px]">
+        <div className="flex items-center gap-3 border-b border-white/8 px-4 py-4 sm:px-5">
           <Search className="h-5 w-5 text-mist-300" />
           <input
             ref={inputRef}
@@ -133,11 +133,11 @@ export function CommandPalette({
             )}
             className="h-10 flex-1 bg-transparent text-sm text-mist-50 outline-none placeholder:text-mist-300/70"
           />
-          <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-mist-300">
+          <span className="hidden rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-mist-300 sm:inline-flex sm:items-center">
             <Command className="mr-1 inline h-3 w-3" />K
           </span>
         </div>
-        <div className="max-h-[420px] overflow-y-auto p-3">
+        <div className="max-h-[min(72vh,420px)] overflow-y-auto p-3">
           {results.length ? (
             results.map((result) => (
               <button

@@ -54,11 +54,13 @@ export type {
 type BandosUIState = BandosWorkspaceData & {
   initializedWorkspaceId: null | string;
   commandPaletteOpen: boolean;
+  mobileSidebarOpen: boolean;
   favoriteCrmIds: string[];
   favoriteProviderIds: string[];
   crmView: "table" | "kanban";
   taskView: "list" | "kanban" | "calendar";
   toggleCommandPalette: (open?: boolean) => void;
+  toggleMobileSidebar: (open?: boolean) => void;
   toggleCrmFavorite: (id: string) => void;
   toggleProviderFavorite: (id: string) => void;
   setCrmView: (view: "table" | "kanban") => void;
@@ -366,6 +368,7 @@ function getInitialState() {
   return {
     initializedWorkspaceId: null,
     commandPaletteOpen: false,
+    mobileSidebarOpen: false,
     favoriteCrmIds: [],
     favoriteProviderIds: [],
     crmView: "table" as const,
@@ -395,6 +398,11 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
     set((state) => ({
       commandPaletteOpen:
         typeof open === "boolean" ? open : !state.commandPaletteOpen
+    })),
+  toggleMobileSidebar: (open) =>
+    set((state) => ({
+      mobileSidebarOpen:
+        typeof open === "boolean" ? open : !state.mobileSidebarOpen
     })),
   toggleCrmFavorite: (id) =>
     set((state) => ({

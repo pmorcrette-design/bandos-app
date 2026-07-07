@@ -32,21 +32,21 @@ export default async function WorkspaceLayout({
     >
       <div
         data-workspace-layout="true"
-        className="mx-auto flex min-h-screen max-w-[1560px] gap-6 px-4 py-4 sm:px-6 lg:px-8"
+        className="mx-auto flex min-h-screen max-w-[1560px] flex-col gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:flex-row lg:gap-6 lg:px-8"
       >
         <Sidebar
           locale={locale}
           workspaceName={session.workspace}
           workspaceLogo={session.logo}
         />
-        <div className="min-w-0 flex-1 space-y-6" data-workspace-content="true">
+        <div className="min-w-0 flex-1 space-y-4 lg:space-y-6" data-workspace-content="true">
           <Topbar
             locale={locale}
             userName={session.name}
             workspaceName={session.workspace}
             workspaceLogo={session.logo}
           />
-          <main className="space-y-6 pb-8" data-workspace-main="true">
+          <main className="space-y-4 pb-8 lg:space-y-6" data-workspace-main="true">
             {children}
           </main>
         </div>

@@ -974,7 +974,7 @@ export function ImportedShowFolders({
                     event.target.value as SupportedCurrency
                   )
                 }
-                className="h-11 min-w-[180px] rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
+                className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none sm:min-w-[180px] sm:w-auto"
               >
                 {(Object.keys(supportedCurrencyMeta) as SupportedCurrency[]).map((code) => (
                   <option key={code} value={code} className="bg-graphite-900">

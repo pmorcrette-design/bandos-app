@@ -2065,7 +2065,7 @@ export function ShowWorkspaceView({
                             event.currentTarget.value = "";
                           }
                         }}
-                        className="h-11 min-w-[220px] rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
+                        className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none sm:min-w-[220px] sm:w-auto"
                         defaultValue=""
                       >
                         <option value="" className="bg-graphite-900">

@@ -33,6 +33,7 @@
       radial-gradient(circle at 88% 8%, rgba(255, 255, 255, 0.05), transparent 20%),
       linear-gradient(180deg, #040506 0%, #090b0d 100%);
     background-attachment: fixed;
+    overflow-x: clip;
   }
 
   h1,
@@ -63,6 +64,15 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -77,6 +87,12 @@
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@media (max-width: 1023px) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 @media print {
