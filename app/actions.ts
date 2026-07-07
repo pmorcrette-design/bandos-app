@@ -15,6 +15,7 @@ import {
   createWorkspaceOwnerAccount,
   findWorkspaceUserByEmail,
   getWorkspaceById,
+  isInternalBandosAdminWorkspaceId,
   isBandosPlatformAdminEmail,
   updateWorkspaceUserPasswordById,
   updateWorkspaceProfile
@@ -46,6 +47,19 @@ function buildDefaultWorkspaceName(email: string) {
     .join(" ");
 }
 
+function getPostSignInRedirect(session: Awaited<ReturnType<typeof authenticateWorkspaceUser>>) {
+  if (!session) {
+    return "/auth/sign-in";
+  }
+
+  return session.user.isBandosAdmin ||
+    isBandosPlatformAdminEmail(session.user.email)
+    ? isInternalBandosAdminWorkspaceId(session.workspace.id)
+      ? "/bandos-admin"
+      : "/app"
+    : "/app";
+}
+
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -59,12 +73,7 @@ export async function signInAction(formData: FormData) {
 
   setBaseSessionCookies(cookieStore, authenticatedSession);
 
-  redirect(
-    authenticatedSession.user.isBandosAdmin ||
-      isBandosPlatformAdminEmail(authenticatedSession.user.email)
-      ? "/bandos-admin"
-      : "/app"
-  );
+  redirect(getPostSignInRedirect(authenticatedSession));
 }
 
 export async function signUpAction(formData: FormData) {

@@ -1,15 +1,19 @@
 import { MerchManagerView } from "@/components/merch/merch-manager-view";
 import { PageHeader } from "@/components/shared/page-header";
 import { buttonStyles } from "@/components/ui/button";
+import { getSessionUser } from "@/lib/auth/session";
 import { t } from "@/lib/i18n";
 import { getSumUpConnectionStatus } from "@/lib/integrations/sumup";
 import { getCurrencyPreference, getLocalePreference } from "@/lib/preferences";
 import Link from "next/link";
 
 export default async function MerchPage() {
-  const currencyPreference = await getCurrencyPreference();
-  const locale = await getLocalePreference();
-  const sumupStatus = await getSumUpConnectionStatus();
+  const [currencyPreference, locale, session] = await Promise.all([
+    getCurrencyPreference(),
+    getLocalePreference(),
+    getSessionUser()
+  ]);
+  const sumupStatus = await getSumUpConnectionStatus(session?.workspaceId);
 
   return (
     <div className="space-y-6">

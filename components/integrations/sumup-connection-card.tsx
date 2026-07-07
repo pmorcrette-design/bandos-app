@@ -66,7 +66,13 @@ export function SumUpConnectionCard({
           : status.readerId
             ? t(locale, "Configuré", "Configured")
             : t(locale, "Non renseigné", "Not set"),
-      meta: status.readerId ?? t(locale, "Ajoute SUMUP_READER_ID", "Add SUMUP_READER_ID")
+      meta:
+        status.readerId ??
+        t(
+          locale,
+          "Renseigne un reader si tu veux remonter l'état du terminal.",
+          "Add a reader if you want terminal status in BandOS."
+        )
     }
   ];
 
@@ -125,8 +131,12 @@ export function SumUpConnectionCard({
               <p className="mt-1 text-mist-300">
                 {t(
                   locale,
-                  "API officielle SumUp branchée sur merchant, transactions history et reader status.",
-                  "Official SumUp API wired to merchant, transaction history, and reader status."
+                  status.source === "legacy-demo-env"
+                    ? "Connexion historique WD active. Tu peux la remplacer par une config client dédiée depuis BandOS Admin."
+                    : "Connexion SumUp dédiée à ce workspace, branchée sur le marchand, l'historique transactions et le reader.",
+                  status.source === "legacy-demo-env"
+                    ? "Legacy WD connection is active. You can replace it with a dedicated client config from BandOS Admin."
+                    : "Workspace-scoped SumUp connection wired to merchant, transaction history, and reader status."
                 )}
               </p>
             </div>
@@ -146,18 +156,22 @@ export function SumUpConnectionCard({
               {status.error ??
                 t(
                   locale,
-                  "BandOS n'arrive pas encore à joindre SumUp avec la configuration fournie.",
-                  "BandOS cannot reach SumUp yet with the current configuration."
+                  "BandOS n'arrive pas encore à joindre SumUp avec la configuration liée à ce workspace.",
+                  "BandOS cannot reach SumUp yet with the configuration linked to this workspace."
                 )}
             </p>
           </>
         ) : (
           <>
             <p className="font-medium text-mist-50">
-              {t(locale, "Variables à renseigner", "Environment variables to set")}
+              {t(locale, "Aucun compte SumUp lié", "No SumUp account linked")}
             </p>
             <p className="mt-2 text-mist-300">
-              `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE`, `SUMUP_READER_ID`
+              {t(
+                locale,
+                "Cette intégration est maintenant gérée par workspace. Ajoute les identifiants du client depuis BandOS Admin pour activer les ventes et imports merch.",
+                "This integration is now managed per workspace. Add the client credentials from BandOS Admin to enable merch sales sync and imports."
+              )}
             </p>
           </>
         )}

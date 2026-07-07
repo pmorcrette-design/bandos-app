@@ -12,12 +12,12 @@ import { getSumUpConnectionStatus } from "@/lib/integrations/sumup";
 import { getCurrencyPreference, getLocalePreference } from "@/lib/preferences";
 
 export default async function SettingsPage() {
-  const [currencyPreference, locale, sumupStatus, session] = await Promise.all([
+  const [currencyPreference, locale, session] = await Promise.all([
     getCurrencyPreference(),
     getLocalePreference(),
-    getSumUpConnectionStatus(),
     getSessionUser()
   ]);
+  const sumupStatus = await getSumUpConnectionStatus(session?.workspaceId);
   const workspaceName = session?.workspace ?? "New workspace";
   const settingCards = [
     {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCw, Shield, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,14 @@ type AdminWorkspaceSummary = {
   userCount: number;
   isProtected: boolean;
   trialDaysLeft: number;
+  sumup: {
+    configured: boolean;
+    source: "none" | "stored" | "legacy-demo-env";
+    apiKeyConfigured: boolean;
+    merchantCode: string | null;
+    readerId: string | null;
+    updatedAt: string | null;
+  };
 };
 
 type PlatformAdminUser = {
@@ -64,6 +72,8 @@ export function BandosAdminView({
   const [workspaces, setWorkspaces] = useState(initialWorkspaces);
   const [adminUsers, setAdminUsers] = useState(initialAdminUsers);
   const [savingWorkspaceId, setSavingWorkspaceId] = useState<string | null>(null);
+  const [savingSumUpWorkspaceId, setSavingSumUpWorkspaceId] = useState<string | null>(null);
+  const [clearingSumUpWorkspaceId, setClearingSumUpWorkspaceId] = useState<string | null>(null);
   const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
   const [creatingAdmin, setCreatingAdmin] = useState(false);
   const [adminForm, setAdminForm] = useState({
@@ -200,6 +210,99 @@ export function BandosAdminView({
       t(locale, "Compte client supprimé.", "Client account deleted.")
     );
     setDeletingWorkspaceId(null);
+  }
+
+  async function saveWorkspaceSumUp(
+    workspaceId: string,
+    payload: {
+      apiKey: string;
+      merchantCode: string;
+      readerId: string;
+    }
+  ) {
+    setSavingSumUpWorkspaceId(workspaceId);
+    setFeedback("");
+    setError("");
+
+    const response = await fetch(`/api/bandos-admin/workspaces/${workspaceId}/sumup`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    const body = (await response.json().catch(() => null)) as
+      | { sumup?: AdminWorkspaceSummary["sumup"]; error?: string }
+      | null;
+
+    if (!response.ok || !body?.sumup) {
+      setError(
+        body?.error ||
+          t(
+            locale,
+            "Impossible d'enregistrer la configuration SumUp.",
+            "Unable to save the SumUp configuration."
+          )
+      );
+      setSavingSumUpWorkspaceId(null);
+      return;
+    }
+
+    setWorkspaces((current) =>
+      current.map((entry) =>
+        entry.workspace.id === workspaceId
+          ? {
+              ...entry,
+              sumup: body.sumup!
+            }
+          : entry
+      )
+    );
+    setFeedback(
+      t(locale, "Configuration SumUp mise à jour.", "SumUp configuration updated.")
+    );
+    setSavingSumUpWorkspaceId(null);
+  }
+
+  async function clearWorkspaceSumUp(workspaceId: string) {
+    setClearingSumUpWorkspaceId(workspaceId);
+    setFeedback("");
+    setError("");
+
+    const response = await fetch(`/api/bandos-admin/workspaces/${workspaceId}/sumup`, {
+      method: "DELETE"
+    });
+    const body = (await response.json().catch(() => null)) as
+      | { sumup?: AdminWorkspaceSummary["sumup"]; error?: string }
+      | null;
+
+    if (!response.ok || !body?.sumup) {
+      setError(
+        body?.error ||
+          t(
+            locale,
+            "Impossible de retirer la configuration SumUp.",
+            "Unable to remove the SumUp configuration."
+          )
+      );
+      setClearingSumUpWorkspaceId(null);
+      return;
+    }
+
+    setWorkspaces((current) =>
+      current.map((entry) =>
+        entry.workspace.id === workspaceId
+          ? {
+              ...entry,
+              sumup: body.sumup!
+            }
+          : entry
+      )
+    );
+    setFeedback(
+      t(locale, "Configuration SumUp retirée.", "SumUp configuration removed.")
+    );
+    setClearingSumUpWorkspaceId(null);
   }
 
   async function createAdminAccount() {
@@ -389,8 +492,12 @@ export function BandosAdminView({
             entry={entry}
             locale={locale}
             isSaving={savingWorkspaceId === entry.workspace.id}
+            isSavingSumUp={savingSumUpWorkspaceId === entry.workspace.id}
+            isClearingSumUp={clearingSumUpWorkspaceId === entry.workspace.id}
             isDeleting={deletingWorkspaceId === entry.workspace.id}
             onSave={saveWorkspace}
+            onSaveSumUp={saveWorkspaceSumUp}
+            onClearSumUp={clearWorkspaceSumUp}
             onDelete={deleteWorkspace}
           />
         ))}
@@ -403,23 +510,55 @@ function WorkspaceAdminRow({
   entry,
   locale,
   isSaving,
+  isSavingSumUp,
+  isClearingSumUp,
   isDeleting,
   onSave,
+  onSaveSumUp,
+  onClearSumUp,
   onDelete
 }: {
   entry: AdminWorkspaceSummary;
   locale: Locale;
   isSaving: boolean;
+  isSavingSumUp: boolean;
+  isClearingSumUp: boolean;
   isDeleting: boolean;
   onSave: (
     workspaceId: string,
     subscriptionPlan: AdminWorkspaceSummary["workspace"]["subscriptionPlan"],
     trialDays: number
   ) => Promise<void>;
+  onSaveSumUp: (
+    workspaceId: string,
+    payload: {
+      apiKey: string;
+      merchantCode: string;
+      readerId: string;
+    }
+  ) => Promise<void>;
+  onClearSumUp: (workspaceId: string) => Promise<void>;
   onDelete: (workspaceId: string) => Promise<void>;
 }) {
   const [subscriptionPlan, setSubscriptionPlan] = useState(entry.workspace.subscriptionPlan);
   const [trialDays, setTrialDays] = useState(String(entry.trialDaysLeft));
+  const [merchantCode, setMerchantCode] = useState(entry.sumup.merchantCode ?? "");
+  const [readerId, setReaderId] = useState(entry.sumup.readerId ?? "");
+  const [apiKey, setApiKey] = useState("");
+
+  useEffect(() => {
+    setSubscriptionPlan(entry.workspace.subscriptionPlan);
+    setTrialDays(String(entry.trialDaysLeft));
+    setMerchantCode(entry.sumup.merchantCode ?? "");
+    setReaderId(entry.sumup.readerId ?? "");
+    setApiKey("");
+  }, [
+    entry.trialDaysLeft,
+    entry.workspace.subscriptionPlan,
+    entry.sumup.merchantCode,
+    entry.sumup.readerId,
+    entry.sumup.updatedAt
+  ]);
 
   return (
     <Card className="space-y-5">
@@ -534,6 +673,106 @@ function WorkspaceAdminRow({
               ? t(locale, "Suppression…", "Deleting…")
               : t(locale, "Supprimer", "Delete")}
           </Button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-base font-medium text-mist-50">SumUp</p>
+              <Badge tone={entry.sumup.configured ? "success" : "accent"}>
+                {entry.sumup.configured
+                  ? t(locale, "Configuré", "Configured")
+                  : t(locale, "Non lié", "Not linked")}
+              </Badge>
+              {entry.sumup.source === "legacy-demo-env" ? (
+                <Badge tone="warning">
+                  {t(locale, "Fallback WD historique", "Legacy WD fallback")}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="mt-2 text-sm text-mist-300">
+              {t(
+                locale,
+                "Configuration SumUp isolée par client. La clé API reste côté serveur et n'est jamais réaffichée.",
+                "Workspace-scoped SumUp config. The API key stays server-side and is never shown again."
+              )}
+            </p>
+          </div>
+          <div className="text-sm text-mist-400">
+            {entry.sumup.updatedAt
+              ? `${t(locale, "Maj", "Updated")} ${new Date(entry.sumup.updatedAt).toLocaleDateString(
+                  locale === "fr" ? "fr-FR" : "en-GB"
+                )}`
+              : t(locale, "Pas encore de config stockée", "No stored config yet")}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_1.2fr_auto]">
+          <label className="space-y-2">
+            <span className="text-sm text-mist-200">
+              {t(locale, "Merchant code", "Merchant code")}
+            </span>
+            <Input
+              value={merchantCode}
+              onChange={(event) => setMerchantCode(event.target.value)}
+              placeholder="MC62KZ9V"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm text-mist-200">
+              {t(locale, "Reader ID", "Reader ID")}
+            </span>
+            <Input
+              value={readerId}
+              onChange={(event) => setReaderId(event.target.value)}
+              placeholder={t(locale, "Optionnel", "Optional")}
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm text-mist-200">
+              {t(locale, "Nouvelle clé API", "New API key")}
+            </span>
+            <Input
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              type="password"
+              placeholder={
+                entry.sumup.apiKeyConfigured
+                  ? t(locale, "Déjà enregistrée côté serveur", "Already stored server-side")
+                  : "sup_sk_..."
+              }
+            />
+          </label>
+          <div className="flex flex-wrap items-end gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isSavingSumUp}
+              onClick={() =>
+                onSaveSumUp(entry.workspace.id, {
+                  apiKey,
+                  merchantCode,
+                  readerId
+                })
+              }
+            >
+              {isSavingSumUp
+                ? t(locale, "Sauvegarde…", "Saving…")
+                : t(locale, "Sauver SumUp", "Save SumUp")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isClearingSumUp}
+              onClick={() => onClearSumUp(entry.workspace.id)}
+            >
+              {isClearingSumUp
+                ? t(locale, "Retrait…", "Removing…")
+                : t(locale, "Retirer", "Remove")}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

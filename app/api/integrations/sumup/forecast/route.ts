@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 
+import { getSessionUser } from "@/lib/auth/session";
 import { getSumUpMerchSalesHistory } from "@/lib/integrations/sumup";
 
 export async function GET() {
   try {
-    const sales = await getSumUpMerchSalesHistory();
+    const session = await getSessionUser();
+
+    if (!session) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const sales = await getSumUpMerchSalesHistory(session.workspaceId);
 
     return NextResponse.json({
       ok: true,

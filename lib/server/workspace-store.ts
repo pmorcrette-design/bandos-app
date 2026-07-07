@@ -68,11 +68,39 @@ type AtaCarnetRecord = {
   updatedAt: string;
 };
 
+type WorkspaceSumUpConfigRecord = {
+  workspaceId: string;
+  apiKey: string;
+  merchantCode: string;
+  readerId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkspaceSumUpAdminPreview = {
+  configured: boolean;
+  source: "none" | "stored" | "legacy-demo-env";
+  apiKeyConfigured: boolean;
+  merchantCode: string | null;
+  readerId: string | null;
+  updatedAt: string | null;
+};
+
+type WorkspaceResolvedSumUpConfig = {
+  workspaceId: string;
+  apiKey: string;
+  merchantCode: string;
+  readerId: string;
+  updatedAt: string | null;
+  source: "stored" | "legacy-demo-env";
+};
+
 type WorkspaceStore = {
-  version: 1;
+  version: 1 | 2;
   workspaces: WorkspaceRecord[];
   users: WorkspaceAccessUserRecord[];
   ataCarnets: AtaCarnetRecord[];
+  sumupConfigs: WorkspaceSumUpConfigRecord[];
 };
 
 const DATA_DIRECTORY = process.env.VERCEL
@@ -97,6 +125,7 @@ export type WorkspaceSummary = {
   userCount: number;
   isProtected: boolean;
   trialDaysLeft: number;
+  sumup: WorkspaceSumUpAdminPreview;
 };
 
 function addTrialDays(days: number) {
@@ -207,6 +236,126 @@ function sanitizeAtaItem(item: Partial<AtaCarnetItem> & Pick<AtaCarnetItem, "id"
   };
 }
 
+function sanitizeWorkspaceSumUpConfigRecord(
+  config: Partial<WorkspaceSumUpConfigRecord> & Pick<WorkspaceSumUpConfigRecord, "workspaceId">
+): WorkspaceSumUpConfigRecord {
+  const now = new Date().toISOString();
+
+  return {
+    workspaceId: config.workspaceId,
+    apiKey: config.apiKey?.trim() ?? "",
+    merchantCode: config.merchantCode?.trim() ?? "",
+    readerId: config.readerId?.trim() ?? "",
+    createdAt: config.createdAt ?? now,
+    updatedAt: config.updatedAt ?? now
+  };
+}
+
+function ensureSumUpConfigs(store: WorkspaceStore) {
+  if (!Array.isArray(store.sumupConfigs)) {
+    store.sumupConfigs = [];
+  }
+
+  return store.sumupConfigs;
+}
+
+function getStoredWorkspaceSumUpConfigRecord(
+  store: WorkspaceStore,
+  workspaceId: string
+) {
+  return ensureSumUpConfigs(store).find((config) => config.workspaceId === workspaceId) ?? null;
+}
+
+function getLegacyDemoWorkspaceSumUpConfig(
+  workspaceId: string
+): WorkspaceResolvedSumUpConfig | null {
+  if (!isDemoWorkspaceId(workspaceId)) {
+    return null;
+  }
+
+  const apiKey = process.env.SUMUP_API_KEY?.trim() ?? "";
+  const merchantCode = process.env.SUMUP_MERCHANT_CODE?.trim() ?? "";
+  const readerId = process.env.SUMUP_READER_ID?.trim() ?? "";
+
+  if (!apiKey || !merchantCode) {
+    return null;
+  }
+
+  return {
+    workspaceId,
+    apiKey,
+    merchantCode,
+    readerId,
+    updatedAt: null,
+    source: "legacy-demo-env"
+  };
+}
+
+function getResolvedWorkspaceSumUpConfigFromStore(
+  store: WorkspaceStore,
+  workspaceId: string
+): WorkspaceResolvedSumUpConfig | null {
+  const storedConfig = getStoredWorkspaceSumUpConfigRecord(store, workspaceId);
+
+  if (storedConfig?.apiKey && storedConfig.merchantCode) {
+    return {
+      workspaceId,
+      apiKey: storedConfig.apiKey,
+      merchantCode: storedConfig.merchantCode,
+      readerId: storedConfig.readerId,
+      updatedAt: storedConfig.updatedAt,
+      source: "stored"
+    };
+  }
+
+  return getLegacyDemoWorkspaceSumUpConfig(workspaceId);
+}
+
+function getWorkspaceSumUpAdminPreviewFromStore(
+  store: WorkspaceStore,
+  workspaceId: string
+): WorkspaceSumUpAdminPreview {
+  const storedConfig = getStoredWorkspaceSumUpConfigRecord(store, workspaceId);
+  const resolvedConfig = getResolvedWorkspaceSumUpConfigFromStore(store, workspaceId);
+
+  return {
+    configured: Boolean(resolvedConfig?.apiKey && resolvedConfig.merchantCode),
+    source: resolvedConfig?.source ?? "none",
+    apiKeyConfigured: Boolean(resolvedConfig?.apiKey),
+    merchantCode: resolvedConfig?.merchantCode ?? null,
+    readerId: resolvedConfig?.readerId || null,
+    updatedAt: storedConfig?.updatedAt ?? null
+  };
+}
+
+function selectPreferredWorkspaceUser(
+  store: WorkspaceStore,
+  users: WorkspaceAccessUserRecord[]
+) {
+  return (
+    [...users].sort((left, right) => {
+      const leftIsInternal = isInternalBandosAdminWorkspaceId(left.workspaceId);
+      const rightIsInternal = isInternalBandosAdminWorkspaceId(right.workspaceId);
+
+      if (leftIsInternal !== rightIsInternal) {
+        return leftIsInternal ? 1 : -1;
+      }
+
+      const leftIsDemo = isDemoWorkspaceId(left.workspaceId);
+      const rightIsDemo = isDemoWorkspaceId(right.workspaceId);
+
+      if (leftIsDemo !== rightIsDemo) {
+        return leftIsDemo ? -1 : 1;
+      }
+
+      return (
+        right.updatedAt.localeCompare(left.updatedAt) ||
+        right.createdAt.localeCompare(left.createdAt)
+      );
+    })[0] ?? null
+  );
+}
+
 async function createUnavailablePasswordHash() {
   return hashPassword(`${randomUUID()}-${randomUUID()}`);
 }
@@ -312,7 +461,7 @@ async function buildSeedStore(): Promise<WorkspaceStore> {
   });
 
   return {
-    version: 1,
+    version: 2,
     workspaces: [workspace, internalAdminWorkspace],
     users,
     ataCarnets: [
@@ -326,13 +475,15 @@ async function buildSeedStore(): Promise<WorkspaceStore> {
         items: [],
         updatedAt: now
       }
-    ]
+    ],
+    sumupConfigs: []
   };
 }
 
 async function ensureInternalBandosAdminWorkspace(store: WorkspaceStore) {
   const now = new Date().toISOString();
   let changed = false;
+  ensureSumUpConfigs(store);
   const workspaceIndex = store.workspaces.findIndex(
     (workspace) => workspace.id === INTERNAL_ADMIN_WORKSPACE_ID
   );
@@ -358,8 +509,15 @@ async function ensureInternalBandosAdminWorkspace(store: WorkspaceStore) {
   }
 
   const adminIndex = store.users.findIndex(
-    (user) => user.email.toLowerCase() === PRIMARY_BANDOS_ADMIN_EMAIL
+    (user) =>
+      user.workspaceId === INTERNAL_ADMIN_WORKSPACE_ID &&
+      user.email.toLowerCase() === PRIMARY_BANDOS_ADMIN_EMAIL
   );
+
+  const fallbackAdminRecord =
+    store.users.find(
+      (user) => user.email.toLowerCase() === PRIMARY_BANDOS_ADMIN_EMAIL
+    ) ?? null;
 
   if (adminIndex < 0) {
     store.users.push({
@@ -367,11 +525,12 @@ async function ensureInternalBandosAdminWorkspace(store: WorkspaceStore) {
       workspaceId: INTERNAL_ADMIN_WORKSPACE_ID,
       name: PRIMARY_BANDOS_ADMIN_NAME,
       email: PRIMARY_BANDOS_ADMIN_EMAIL,
-      passwordHash: await createUnavailablePasswordHash(),
+      passwordHash:
+        fallbackAdminRecord?.passwordHash ?? (await createUnavailablePasswordHash()),
       role: "owner",
       isBandosAdmin: true,
       title: "BandOS platform admin",
-      imageUrl: null,
+      imageUrl: fallbackAdminRecord?.imageUrl ?? null,
       createdAt: now,
       updatedAt: now
     });
@@ -379,18 +538,43 @@ async function ensureInternalBandosAdminWorkspace(store: WorkspaceStore) {
   } else {
     const existingAdmin = store.users[adminIndex];
 
-    if (
-      existingAdmin.workspaceId !== INTERNAL_ADMIN_WORKSPACE_ID ||
-      !existingAdmin.isBandosAdmin
-    ) {
+    if (!existingAdmin.isBandosAdmin) {
       store.users[adminIndex] = {
         ...existingAdmin,
-        workspaceId: INTERNAL_ADMIN_WORKSPACE_ID,
         isBandosAdmin: true,
         updatedAt: now
       };
       changed = true;
     }
+  }
+
+  const primaryInternalAdmin =
+    store.users.find(
+      (user) =>
+        user.workspaceId === INTERNAL_ADMIN_WORKSPACE_ID &&
+        user.email.toLowerCase() === PRIMARY_BANDOS_ADMIN_EMAIL
+    ) ?? null;
+  const demoAdminIndex = store.users.findIndex(
+    (user) =>
+      user.workspaceId === DEMO_WORKSPACE_ID &&
+      user.email.toLowerCase() === PRIMARY_BANDOS_ADMIN_EMAIL
+  );
+
+  if (demoAdminIndex < 0 && primaryInternalAdmin) {
+    store.users.push({
+      id: randomUUID(),
+      workspaceId: DEMO_WORKSPACE_ID,
+      name: primaryInternalAdmin.name,
+      email: primaryInternalAdmin.email,
+      passwordHash: primaryInternalAdmin.passwordHash,
+      role: "admin",
+      isBandosAdmin: true,
+      title: "BandOS admin access",
+      imageUrl: primaryInternalAdmin.imageUrl,
+      createdAt: now,
+      updatedAt: now
+    });
+    changed = true;
   }
 
   const ataCountBefore = store.ataCarnets.length;
@@ -480,13 +664,26 @@ async function readStore(): Promise<WorkspaceStore> {
           ...user,
           isBandosAdmin: Boolean(user.isBandosAdmin)
         })),
-        ataCarnets: blobStore.ataCarnets ?? []
+        ataCarnets: blobStore.ataCarnets ?? [],
+        sumupConfigs: (blobStore.sumupConfigs ?? []).map((config) =>
+          sanitizeWorkspaceSumUpConfigRecord(config)
+        )
       };
     }
 
     const seedStore = await buildSeedStore();
-    await writeBlobStore(seedStore);
-    return seedStore;
+    const changed = await ensureInternalBandosAdminWorkspace(seedStore);
+    if (changed) {
+      await writeBlobStore(seedStore);
+    } else {
+      await writeBlobStore(seedStore);
+    }
+    return {
+      ...seedStore,
+      sumupConfigs: (seedStore.sumupConfigs ?? []).map((config) =>
+        sanitizeWorkspaceSumUpConfigRecord(config)
+      )
+    };
   }
 
   await ensureStoreFile();
@@ -506,7 +703,10 @@ async function readStore(): Promise<WorkspaceStore> {
       ...user,
       isBandosAdmin: Boolean(user.isBandosAdmin)
     })),
-    ataCarnets: parsedStore.ataCarnets ?? []
+    ataCarnets: parsedStore.ataCarnets ?? [],
+    sumupConfigs: (parsedStore.sumupConfigs ?? []).map((config) =>
+      sanitizeWorkspaceSumUpConfigRecord(config)
+    )
   };
 }
 
@@ -582,16 +782,27 @@ export async function authenticateWorkspaceUser(
 ) {
   const normalizedEmail = email.trim().toLowerCase();
   const store = await readStore();
-  const user = store.users.find(
+  const candidates = store.users.filter(
     (entry) => entry.email.toLowerCase() === normalizedEmail
   );
 
-  if (!user) {
+  if (!candidates.length) {
     return null;
   }
 
-  const passwordMatches = await verifyPassword(password, user.passwordHash);
-  if (!passwordMatches) {
+  const matchingUsers: WorkspaceAccessUserRecord[] = [];
+
+  for (const candidate of candidates) {
+    const passwordMatches = await verifyPassword(password, candidate.passwordHash);
+
+    if (passwordMatches) {
+      matchingUsers.push(candidate);
+    }
+  }
+
+  const user = selectPreferredWorkspaceUser(store, matchingUsers);
+
+  if (!user) {
     return null;
   }
 
@@ -866,7 +1077,8 @@ export async function listWorkspaceSummariesForBandosAdmin() {
         owner: owner ? sanitizeAccessUser(owner) : null,
         userCount: workspaceUsers.length,
         isProtected: isDemoWorkspaceId(workspace.id),
-        trialDaysLeft: getTrialDaysLeft(workspace.trialEndsAt)
+        trialDaysLeft: getTrialDaysLeft(workspace.trialEndsAt),
+        sumup: getWorkspaceSumUpAdminPreviewFromStore(store, workspace.id)
       };
     })
     .sort((left, right) => right.workspace.updatedAt.localeCompare(left.workspace.updatedAt));
@@ -876,7 +1088,10 @@ export async function listBandosPlatformAdminAccounts() {
   const store = await readStore();
 
   return store.users
-    .filter((user) => isUserBandosAdmin(user))
+    .filter(
+      (user) =>
+        user.workspaceId === INTERNAL_ADMIN_WORKSPACE_ID && isUserBandosAdmin(user)
+    )
     .map((user) => sanitizeAccessUser(user))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -884,8 +1099,9 @@ export async function listBandosPlatformAdminAccounts() {
 export async function findWorkspaceUserByEmail(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
   const store = await readStore();
-  const user = store.users.find(
-    (entry) => entry.email.toLowerCase() === normalizedEmail
+  const user = selectPreferredWorkspaceUser(
+    store,
+    store.users.filter((entry) => entry.email.toLowerCase() === normalizedEmail)
   );
 
   if (!user) {
@@ -914,19 +1130,108 @@ export async function updateWorkspaceUserPasswordById(userId: string, password: 
   }
 
   const currentUser = store.users[userIndex];
-  const updatedUser: WorkspaceAccessUserRecord = {
-    ...currentUser,
-    passwordHash: await hashPassword(password),
-    updatedAt: new Date().toISOString()
-  };
+  const nextPasswordHash = await hashPassword(password);
+  const now = new Date().toISOString();
 
-  store.users[userIndex] = updatedUser;
+  store.users = store.users.map((user) =>
+    user.email.toLowerCase() === currentUser.email.toLowerCase()
+      ? {
+          ...user,
+          passwordHash: nextPasswordHash,
+          updatedAt: now
+        }
+      : user
+  );
+  const updatedUser = store.users[userIndex] ?? currentUser;
   await persistStoreMutation(previousStore, store, `update-password-${updatedUser.workspaceId}`);
   return {
     user: sanitizeAccessUser(updatedUser),
     workspace:
       store.workspaces.find((entry) => entry.id === updatedUser.workspaceId) ?? null
   };
+}
+
+export async function getWorkspaceSumUpAdminPreview(workspaceId: string) {
+  const store = await readStore();
+  return getWorkspaceSumUpAdminPreviewFromStore(store, workspaceId);
+}
+
+export async function getWorkspaceResolvedSumUpConfig(workspaceId: string) {
+  const store = await readStore();
+  return getResolvedWorkspaceSumUpConfigFromStore(store, workspaceId);
+}
+
+export async function upsertWorkspaceSumUpConfig(payload: {
+  workspaceId: string;
+  apiKey?: string;
+  merchantCode?: string;
+  readerId?: string;
+}) {
+  const store = await readStore();
+  const previousStore = structuredClone(store);
+  const now = new Date().toISOString();
+  const existingIndex = ensureSumUpConfigs(store).findIndex(
+    (config) => config.workspaceId === payload.workspaceId
+  );
+  const existingStoredConfig =
+    existingIndex >= 0 ? store.sumupConfigs[existingIndex] : null;
+  const existingResolvedConfig = getResolvedWorkspaceSumUpConfigFromStore(
+    store,
+    payload.workspaceId
+  );
+  const nextApiKey =
+    payload.apiKey?.trim() ||
+    existingStoredConfig?.apiKey ||
+    existingResolvedConfig?.apiKey ||
+    "";
+  const nextMerchantCode =
+    payload.merchantCode?.trim() ||
+    existingStoredConfig?.merchantCode ||
+    existingResolvedConfig?.merchantCode ||
+    "";
+  const nextReaderId =
+    payload.readerId?.trim() ||
+    existingStoredConfig?.readerId ||
+    existingResolvedConfig?.readerId ||
+    "";
+
+  if (!nextApiKey || !nextMerchantCode) {
+    throw new Error("SUMUP_CONFIG_INCOMPLETE");
+  }
+
+  const nextConfig = sanitizeWorkspaceSumUpConfigRecord({
+    workspaceId: payload.workspaceId,
+    apiKey: nextApiKey,
+    merchantCode: nextMerchantCode,
+    readerId: nextReaderId,
+    createdAt: existingStoredConfig?.createdAt ?? now,
+    updatedAt: now
+  });
+
+  if (existingIndex >= 0) {
+    store.sumupConfigs[existingIndex] = nextConfig;
+  } else {
+    store.sumupConfigs.push(nextConfig);
+  }
+
+  await persistStoreMutation(previousStore, store, `sumup-${payload.workspaceId}`);
+  return getWorkspaceSumUpAdminPreviewFromStore(store, payload.workspaceId);
+}
+
+export async function deleteWorkspaceSumUpConfig(workspaceId: string) {
+  const store = await readStore();
+  const previousStore = structuredClone(store);
+  const nextConfigs = ensureSumUpConfigs(store).filter(
+    (config) => config.workspaceId !== workspaceId
+  );
+
+  if (nextConfigs.length === store.sumupConfigs.length) {
+    return getWorkspaceSumUpAdminPreviewFromStore(store, workspaceId);
+  }
+
+  store.sumupConfigs = nextConfigs;
+  await persistStoreMutation(previousStore, store, `delete-sumup-${workspaceId}`);
+  return getWorkspaceSumUpAdminPreviewFromStore(store, workspaceId);
 }
 
 export async function createBandosPlatformAdminAccount(payload: {
@@ -1009,6 +1314,9 @@ export async function deleteWorkspaceClientAccount(workspaceId: string) {
   store.workspaces = store.workspaces.filter((workspace) => workspace.id !== workspaceId);
   store.users = store.users.filter((user) => user.workspaceId !== workspaceId);
   store.ataCarnets = store.ataCarnets.filter((record) => record.workspaceId !== workspaceId);
+  store.sumupConfigs = ensureSumUpConfigs(store).filter(
+    (config) => config.workspaceId !== workspaceId
+  );
   await persistStoreMutation(previousStore, store, `delete-workspace-${workspaceId}`);
 }
 

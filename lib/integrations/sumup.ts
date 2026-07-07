@@ -1,4 +1,5 @@
 import { convertCurrency, normalizeCurrency, type SupportedCurrency } from "@/lib/utils";
+import { getWorkspaceResolvedSumUpConfig } from "@/lib/server/workspace-store";
 
 const SUMUP_API_BASE = "https://api.sumup.com";
 
@@ -51,6 +52,7 @@ export type SumUpConnectionStatus = {
   configured: boolean;
   connected: boolean;
   mode: "none" | "api-key";
+  source: "none" | "stored" | "legacy-demo-env";
   merchantCode: string | null;
   readerId: string | null;
   merchantName: string | null;
@@ -66,14 +68,6 @@ export type SumUpConnectionStatus = {
   error: string | null;
   recentTransactions: SumUpTransactionRecord[];
 };
-
-function getSumUpConfig() {
-  return {
-    apiKey: process.env.SUMUP_API_KEY ?? "",
-    merchantCode: process.env.SUMUP_MERCHANT_CODE ?? "",
-    readerId: process.env.SUMUP_READER_ID ?? ""
-  };
-}
 
 async function sumUpFetch<T>(path: string, apiKey: string) {
   const response = await fetch(`${SUMUP_API_BASE}${path}`, {
@@ -224,8 +218,13 @@ async function listRecentSumUpTransactions(merchantCode: string, apiKey: string)
   return response.items ?? [];
 }
 
-export async function getSumUpCatalogImportItems(): Promise<SumUpCatalogImportItem[]> {
-  const { apiKey, merchantCode } = getSumUpConfig();
+export async function getSumUpCatalogImportItems(
+  workspaceId?: string | null
+): Promise<SumUpCatalogImportItem[]> {
+  const config =
+    workspaceId ? await getWorkspaceResolvedSumUpConfig(workspaceId) : null;
+  const apiKey = config?.apiKey ?? "";
+  const merchantCode = config?.merchantCode ?? "";
 
   if (!apiKey || !merchantCode) {
     return [];
@@ -288,8 +287,13 @@ export async function getSumUpCatalogImportItems(): Promise<SumUpCatalogImportIt
   );
 }
 
-export async function getSumUpMerchSalesHistory(): Promise<SumUpMerchSaleLine[]> {
-  const { apiKey, merchantCode } = getSumUpConfig();
+export async function getSumUpMerchSalesHistory(
+  workspaceId?: string | null
+): Promise<SumUpMerchSaleLine[]> {
+  const config =
+    workspaceId ? await getWorkspaceResolvedSumUpConfig(workspaceId) : null;
+  const apiKey = config?.apiKey ?? "";
+  const merchantCode = config?.merchantCode ?? "";
 
   if (!apiKey || !merchantCode) {
     return [];
@@ -349,14 +353,21 @@ export async function getSumUpMerchSalesHistory(): Promise<SumUpMerchSaleLine[]>
   });
 }
 
-export async function getSumUpConnectionStatus(): Promise<SumUpConnectionStatus> {
-  const { apiKey, merchantCode, readerId } = getSumUpConfig();
+export async function getSumUpConnectionStatus(
+  workspaceId?: string | null
+): Promise<SumUpConnectionStatus> {
+  const config =
+    workspaceId ? await getWorkspaceResolvedSumUpConfig(workspaceId) : null;
+  const apiKey = config?.apiKey ?? "";
+  const merchantCode = config?.merchantCode ?? "";
+  const readerId = config?.readerId ?? "";
 
   if (!apiKey || !merchantCode) {
     return {
       configured: false,
       connected: false,
       mode: "none",
+      source: "none",
       merchantCode: merchantCode || null,
       readerId: readerId || null,
       merchantName: null,
@@ -415,6 +426,7 @@ export async function getSumUpConnectionStatus(): Promise<SumUpConnectionStatus>
       configured: true,
       connected: true,
       mode: "api-key",
+      source: config?.source ?? "stored",
       merchantCode,
       readerId: readerId || null,
       merchantName,
@@ -435,6 +447,7 @@ export async function getSumUpConnectionStatus(): Promise<SumUpConnectionStatus>
       configured: true,
       connected: false,
       mode: "api-key",
+      source: config?.source ?? "stored",
       merchantCode,
       readerId: readerId || null,
       merchantName: null,

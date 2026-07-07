@@ -12,11 +12,13 @@ import { getCurrencyPreference, getLocalePreference } from "@/lib/preferences";
 import { getSessionUser } from "@/lib/auth/session";
 
 export default async function MerchForecastPage() {
-  const locale = await getLocalePreference();
-  const currencyPreference = await getCurrencyPreference();
   const session = await getSessionUser();
-  const sumupStatus = await getSumUpConnectionStatus();
-  let initialSales = await getSumUpMerchSalesHistory().catch(() => []);
+  const [locale, currencyPreference, sumupStatus] = await Promise.all([
+    getLocalePreference(),
+    getCurrencyPreference(),
+    getSumUpConnectionStatus(session?.workspaceId)
+  ]);
+  let initialSales = await getSumUpMerchSalesHistory(session?.workspaceId).catch(() => []);
   let initialError: string | null = null;
 
   if (!initialSales.length && sumupStatus.error) {

@@ -5,7 +5,24 @@ import {
   clearBaseSessionCookies,
   setBaseSessionCookies
 } from "@/lib/auth/cookies";
-import { authenticateWorkspaceUser } from "@/lib/server/workspace-store";
+import {
+  authenticateWorkspaceUser,
+  isBandosPlatformAdminEmail,
+  isInternalBandosAdminWorkspaceId
+} from "@/lib/server/workspace-store";
+
+function getPostSignInPath(session: Awaited<ReturnType<typeof authenticateWorkspaceUser>>) {
+  if (!session) {
+    return "/auth/sign-in";
+  }
+
+  return session.user.isBandosAdmin ||
+    isBandosPlatformAdminEmail(session.user.email)
+    ? isInternalBandosAdminWorkspaceId(session.workspace.id)
+      ? "/bandos-admin"
+      : "/app"
+    : "/app";
+}
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
@@ -37,6 +54,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
+    nextPath: getPostSignInPath(session),
     user: {
       id: session.user.id,
       name: session.user.name,
