@@ -987,6 +987,38 @@ function findBudgetInQuestion(question: string) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function detectRequestedProductType(question: string): MerchProductType | null {
+  if (question.includes("hoodie")) {
+    return "hoodie";
+  }
+
+  if (question.includes("longsleeve") || question.includes("long sleeve")) {
+    return "longsleeve";
+  }
+
+  if (question.includes("patch")) {
+    return "patch";
+  }
+
+  if (question.includes("poster")) {
+    return "poster";
+  }
+
+  if (question.includes("vinyl")) {
+    return "vinyl";
+  }
+
+  if (question.includes("cd")) {
+    return "cd";
+  }
+
+  if (question.includes("t shirt") || question.includes("tee")) {
+    return "t-shirt";
+  }
+
+  return null;
+}
+
 export function answerMerchAssistantQuestion(args: {
   question: string;
   forecast: MerchForecastResult;
@@ -994,7 +1026,7 @@ export function answerMerchAssistantQuestion(args: {
 }): MerchAssistantAnswer {
   const question = normalizeLabel(args.question);
   const budget = findBudgetInQuestion(args.question);
-  const tshirtLines = args.forecast.lines.filter((line) => line.productType === "t-shirt");
+  const requestedProductType = detectRequestedProductType(question);
   const xlRisk = args.forecast.lines
     .flatMap((line) =>
       line.sizeRecommendation
@@ -1089,14 +1121,24 @@ export function answerMerchAssistantQuestion(args: {
     };
   }
 
-  if (question.includes("t shirt") || question.includes("tee")) {
+  if (requestedProductType) {
+    const matchedLines = args.forecast.lines.filter(
+      (line) => line.productType === requestedProductType
+    );
+    const typeLabel =
+      requestedProductType === "t-shirt"
+        ? "t-shirts"
+        : requestedProductType === "cd"
+          ? "CD"
+          : `${requestedProductType}s`;
+
     return {
-      title: "Volume t-shirts recommandé",
-      summary: `Je recommande ${tshirtLines.reduce(
+      title: `Volume ${typeLabel} recommandé`,
+      summary: `Je recommande ${matchedLines.reduce(
         (sum, line) => sum + line.recommendedToProduce,
         0
-      )} t-shirts à produire sur ce scope.`,
-      bullets: tshirtLines
+      )} ${typeLabel} à produire sur ce scope.`,
+      bullets: matchedLines
         .slice(0, 4)
         .map((line) => `${line.productName}: ${line.recommendedToProduce} unités`)
     };

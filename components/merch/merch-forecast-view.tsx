@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Bot,
   Boxes,
   BrainCircuit,
   ClipboardList,
+  MessageSquareMore,
   PackageSearch,
   RefreshCw,
+  RotateCcw,
+  SendHorizontal,
   ShoppingCart,
   Sparkles
 } from "lucide-react";
@@ -24,8 +27,7 @@ import {
   buildMerchForecast,
   buildMerchSalesAnalytics,
   generateMerchPurchaseOrder,
-  type ForecastSumUpSale,
-  type MerchAssistantAnswer
+  type ForecastSumUpSale
 } from "@/lib/merch-forecast";
 import { t, type Locale } from "@/lib/i18n";
 import { convertCurrency, formatCurrency, type SupportedCurrency } from "@/lib/utils";
@@ -50,6 +52,49 @@ function formatPercent(value: number | null) {
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
+}
+
+type AssistantChatMessage = {
+  id: string;
+  role: "assistant" | "user";
+  title?: string;
+  text: string;
+  bullets?: string[];
+};
+
+function buildAssistantIntroMessage(
+  locale: Locale,
+  unitsToProduce: number,
+  bestMarginProduct: string | null
+): AssistantChatMessage {
+  return {
+    id: `assistant-intro-${Date.now()}`,
+    role: "assistant",
+    title: "BandOS Merch Bot",
+    text: t(
+      locale,
+      "Je peux t'aider à lire la projection merch, repérer les risques de rupture, comparer les designs et te préparer une commande fournisseur réaliste.",
+      "I can help you read the merch forecast, spot stockout risks, compare designs, and prepare a realistic supplier order."
+    ),
+    bullets: [
+      t(
+        locale,
+        `Projection active: ${unitsToProduce} unités à produire sur le scope courant.`,
+        `Active forecast: ${unitsToProduce} units to produce in the current scope.`
+      ),
+      bestMarginProduct
+        ? t(
+            locale,
+            `Meilleure marge potentielle en ce moment: ${bestMarginProduct}.`,
+            `Best potential margin right now: ${bestMarginProduct}.`
+          )
+        : t(
+            locale,
+            "Les coûts produits manquent encore sur certaines références.",
+            "Some product costs are still missing."
+          )
+    ]
+  };
 }
 
 export function MerchForecastView({
@@ -92,7 +137,9 @@ export function MerchForecastView({
   const [designFilter, setDesignFilter] = useState("all");
   const [productTypeFilter, setProductTypeFilter] = useState("all");
   const [assistantQuestion, setAssistantQuestion] = useState("");
-  const [assistantAnswer, setAssistantAnswer] = useState<MerchAssistantAnswer | null>(null);
+  const [assistantMessages, setAssistantMessages] = useState<AssistantChatMessage[]>([]);
+  const [isAssistantThinking, setIsAssistantThinking] = useState(false);
+  const assistantReplyNonceRef = useRef(0);
   const [orderSupplier, setOrderSupplier] = useState("All suppliers");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
@@ -260,6 +307,25 @@ export function MerchForecastView({
     [merchPurchaseOrders, selectedOrderId]
   );
 
+  useEffect(() => {
+    if (assistantMessages.length > 0) {
+      return;
+    }
+
+    setAssistantMessages([
+      buildAssistantIntroMessage(
+        locale,
+        forecast.totals.unitsToProduce,
+        forecast.assistantFacts.bestMarginProduct
+      )
+    ]);
+  }, [
+    assistantMessages.length,
+    forecast.assistantFacts.bestMarginProduct,
+    forecast.totals.unitsToProduce,
+    locale
+  ]);
+
   async function refreshSales() {
     setIsRefreshing(true);
     setSyncError(null);
@@ -310,13 +376,61 @@ export function MerchForecastView({
   }
 
   function askAssistant(question: string) {
-    setAssistantAnswer(
-      answerMerchAssistantQuestion({
-        question,
-        forecast,
-        analytics
-      })
-    );
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion) {
+      return;
+    }
+
+    setAssistantMessages((current) => [
+      ...current,
+      {
+        id: `user-${Date.now()}`,
+        role: "user",
+        text: trimmedQuestion
+      }
+    ]);
+    setAssistantQuestion("");
+    setIsAssistantThinking(true);
+    assistantReplyNonceRef.current += 1;
+    const replyNonce = assistantReplyNonceRef.current;
+
+    const answer = answerMerchAssistantQuestion({
+      question: trimmedQuestion,
+      forecast,
+      analytics
+    });
+
+    window.setTimeout(() => {
+      if (assistantReplyNonceRef.current !== replyNonce) {
+        return;
+      }
+
+      setAssistantMessages((current) => [
+        ...current,
+        {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          title: answer.title,
+          text: answer.summary,
+          bullets: answer.bullets
+        }
+      ]);
+      setIsAssistantThinking(false);
+    }, 220);
+  }
+
+  function resetAssistantConversation() {
+    setAssistantQuestion("");
+    assistantReplyNonceRef.current += 1;
+    setIsAssistantThinking(false);
+    setAssistantMessages([
+      buildAssistantIntroMessage(
+        locale,
+        forecast.totals.unitsToProduce,
+        forecast.assistantFacts.bestMarginProduct
+      )
+    ]);
   }
 
   function createPurchaseOrder() {
@@ -847,23 +961,32 @@ export function MerchForecastView({
 
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
-          <div className="flex items-center gap-3">
-            <BrainCircuit className="h-5 w-5 text-coral-300" />
-            <div>
-              <p className="text-lg font-medium text-mist-50">AI Merch Assistant</p>
-              <p className="text-sm text-mist-300">
-                {t(
-                  locale,
-                  "Assistant cadré par les chiffres BandOS: ventes SumUp, stock, coûts et projection. Il n'invente pas les volumes manquants.",
-                  "Assistant grounded in BandOS data: SumUp sales, stock, costs, and forecast. It does not invent missing numbers."
-                )}
-              </p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+                <BrainCircuit className="h-5 w-5 text-coral-300" />
+              </div>
+              <div>
+                <p className="text-lg font-medium text-mist-50">BandOS Merch Bot</p>
+                <p className="text-sm text-mist-300">
+                  {t(
+                    locale,
+                    "Chat merch piloté par les chiffres BandOS. Il répond sur les quantités, les designs, les marges et les risques sans inventer les données manquantes.",
+                    "Merch chat powered by BandOS numbers. It answers about quantities, designs, margins, and risks without inventing missing data."
+                  )}
+                </p>
+              </div>
             </div>
+            <Button type="button" variant="secondary" onClick={resetAssistantConversation}>
+              <RotateCcw className="h-4 w-4" />
+              {t(locale, "Reset chat", "Reset chat")}
+            </Button>
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
             {[
               "Combien de t-shirts doit-on produire pour cette tournée ?",
+              "Et les hoodies ?",
               "Est-ce qu’on risque d’être en rupture de XL ?",
               "Quel produit a la meilleure marge ?",
               "Fais-moi une commande merch raisonnable avec un budget de 800€."
@@ -871,52 +994,115 @@ export function MerchForecastView({
               <button
                 key={question}
                 type="button"
-                onClick={() => {
-                  setAssistantQuestion(question);
-                  askAssistant(question);
-                }}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-mist-200 transition hover:bg-white/10"
+                onClick={() => askAssistant(question)}
+                disabled={isAssistantThinking}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-mist-200 transition hover:bg-white/10 disabled:opacity-60"
               >
                 {question}
               </button>
             ))}
           </div>
 
-          <div className="mt-5 space-y-3">
-            <textarea
-              value={assistantQuestion}
-              onChange={(event) => setAssistantQuestion(event.target.value)}
-              className={textareaClassName}
-              placeholder={t(
-                locale,
-                "Pose une question sur les quantités, les marges, les risques de rupture ou le budget.",
-                "Ask about quantities, margins, stockout risk, or budget."
-              )}
-            />
-            <Button
-              type="button"
-              onClick={() => askAssistant(assistantQuestion)}
-              disabled={!assistantQuestion.trim()}
-            >
-              <Bot className="h-4 w-4" />
-              {t(locale, "Analyser", "Analyze")}
-            </Button>
-          </div>
-
-          {assistantAnswer ? (
-            <div className="mt-5 rounded-[24px] border border-white/8 bg-black/20 p-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-coral-300" />
-                <p className="font-medium text-mist-50">{assistantAnswer.title}</p>
+          <div className="mt-5 rounded-[28px] border border-white/8 bg-black/20">
+            <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-mist-200">
+                <MessageSquareMore className="h-4 w-4 text-coral-300" />
+                {t(locale, "Conversation merch", "Merch conversation")}
               </div>
-              <p className="mt-3 text-sm text-mist-200">{assistantAnswer.summary}</p>
-              <ul className="mt-4 space-y-2 text-sm text-mist-200">
-                {assistantAnswer.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
+              <Badge tone="accent">
+                {assistantMessages.length} {t(locale, "message(s)", "message(s)")}
+              </Badge>
             </div>
-          ) : null}
+
+            <div className="max-h-[460px] space-y-4 overflow-y-auto px-4 py-4">
+              {assistantMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[88%] rounded-[24px] px-4 py-3 ${
+                      message.role === "user"
+                        ? "border border-coral-500/20 bg-coral-500/10 text-coral-50"
+                        : "border border-white/8 bg-white/[0.04] text-mist-100"
+                    }`}
+                  >
+                    {message.role === "assistant" ? (
+                      <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-mist-300">
+                        <Bot className="h-3.5 w-3.5 text-coral-300" />
+                        {message.title ?? "BandOS"}
+                      </div>
+                    ) : null}
+                    <p className="text-sm leading-7">{message.text}</p>
+                    {message.bullets?.length ? (
+                      <ul className="mt-3 space-y-2 text-sm leading-6 text-mist-200">
+                        {message.bullets.map((bullet) => (
+                          <li key={bullet}>{bullet}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+
+              {isAssistantThinking ? (
+                <div className="flex justify-start">
+                  <div className="max-w-[88%] rounded-[24px] border border-white/8 bg-white/[0.04] px-4 py-3 text-mist-100">
+                    <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-mist-300">
+                      <Sparkles className="h-3.5 w-3.5 text-coral-300" />
+                      BandOS
+                    </div>
+                    <p className="text-sm leading-7">
+                      {t(
+                        locale,
+                        "Je relis les ventes SumUp, le stock et la projection en cours…",
+                        "Reviewing SumUp sales, stock, and the current forecast…"
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <form
+              className="border-t border-white/8 px-4 py-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                askAssistant(assistantQuestion);
+              }}
+            >
+              <div className="space-y-3">
+                <textarea
+                  value={assistantQuestion}
+                  onChange={(event) => setAssistantQuestion(event.target.value)}
+                  className={textareaClassName}
+                  placeholder={t(
+                    locale,
+                    "Parle-lui comme à un merch manager: combien produire, quel design pousser, que couper si le budget est trop serré…",
+                    "Talk to it like a merch manager: how much to produce, which design to push, what to cut if the budget is too tight…"
+                  )}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-mist-300">
+                    {t(
+                      locale,
+                      "Le bot répond à partir des données merch visibles dans BandOS.",
+                      "The bot answers from the merch data visible in BandOS."
+                    )}
+                  </p>
+                  <Button
+                    type="submit"
+                    disabled={!assistantQuestion.trim() || isAssistantThinking}
+                  >
+                    <SendHorizontal className="h-4 w-4" />
+                    {t(locale, "Envoyer", "Send")}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
         </Card>
 
         <Card>

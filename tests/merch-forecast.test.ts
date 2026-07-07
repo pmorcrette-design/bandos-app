@@ -2,6 +2,7 @@ import { test } from "node:test";
 import * as assert from "node:assert/strict";
 
 import {
+  answerMerchAssistantQuestion,
   buildMerchForecast,
   buildMerchSalesAnalytics,
   generateMerchPurchaseOrder,
@@ -205,4 +206,36 @@ test("purchase order includes design names and keeps supplier filtering", () => 
   assert.ok(order.lines.length > 0);
   assert.ok(order.lines.every((line) => line.designName.length > 0));
   assert.ok(order.lines.every((line) => line.productName.includes("Concrete Sigil")));
+});
+
+test("assistant can answer conversational product-type follow-ups", () => {
+  const analytics = buildMerchSalesAnalytics({
+    products,
+    designs,
+    shows,
+    sales,
+    occupancyRate: 0.8
+  });
+  const forecast = buildMerchForecast({
+    products,
+    designs,
+    sales,
+    scenario: {
+      label: "UK Tour",
+      eventType: "headline",
+      season: "spring",
+      occupancyRate: 0.8,
+      budgetMax: null,
+      shows
+    }
+  });
+
+  const answer = answerMerchAssistantQuestion({
+    question: "Et les t-shirts ?",
+    forecast,
+    analytics
+  });
+
+  assert.match(answer.title, /Volume/i);
+  assert.ok(answer.summary.length > 0);
 });
