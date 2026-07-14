@@ -34,7 +34,12 @@ type EpkBuilderRendererProps = {
   siteSlug?: string;
   onSelectPage?: (pageId: string) => void;
   onSelectBlock?: (pageId: string, blockId: string) => void;
-  onMoveBlock?: (pageId: string, draggedBlockId: string, targetBlockId: string) => void;
+  onMoveBlock?: (
+    pageId: string,
+    draggedBlockId: string,
+    targetBlockId: string,
+    placement?: "before" | "after"
+  ) => void;
 };
 
 type ThemeConfig = {
@@ -404,7 +409,12 @@ function EpkBlockWrapper({
   theme: ThemeConfig;
   selected: boolean;
   onSelectBlock?: (pageId: string, blockId: string) => void;
-  onMoveBlock?: (pageId: string, draggedBlockId: string, targetBlockId: string) => void;
+  onMoveBlock?: (
+    pageId: string,
+    draggedBlockId: string,
+    targetBlockId: string,
+    placement?: "before" | "after"
+  ) => void;
 }) {
   const interactive = mode === "editor";
 
@@ -440,9 +450,12 @@ function EpkBlockWrapper({
             pageId: string;
             blockId: string;
           };
+          const rect = event.currentTarget.getBoundingClientRect();
+          const placement =
+            event.clientY >= rect.top + rect.height / 2 ? "after" : "before";
 
           if (payload.blockId && payload.blockId !== block.id && payload.pageId === pageId) {
-            onMoveBlock?.(pageId, payload.blockId, block.id);
+            onMoveBlock?.(pageId, payload.blockId, block.id, placement);
           }
         } catch {
           // noop

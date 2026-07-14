@@ -7,6 +7,7 @@ import {
   Eye,
   EyeOff,
   Grid2x2,
+  GripVertical,
   ImagePlus,
   LayoutTemplate,
   Lock,
@@ -535,6 +536,7 @@ export function EpkWorkspaceView({
     }
 
     const nextBlock = createEpkBuilderBlock(type);
+    const insertAtStart = type === "header";
 
     commitBuilder((current) => ({
       ...current,
@@ -548,7 +550,7 @@ export function EpkWorkspaceView({
         page.id === selectedPage.id
           ? {
               ...page,
-              blocks: [...page.blocks, nextBlock]
+              blocks: insertAtStart ? [nextBlock, ...page.blocks] : [...page.blocks, nextBlock]
             }
           : page
       )
@@ -589,31 +591,46 @@ export function EpkWorkspaceView({
     }));
   }
 
+  function deleteBlock(pageId: string, blockId: string) {
+    commitBuilder((current) => {
+      const nextPages = current.pages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              blocks: page.blocks.filter((block) => block.id !== blockId)
+            }
+          : page
+      );
+      const currentSelectedPage =
+        nextPages.find((page) => page.id === current.selectedPageId) ?? nextPages[0] ?? null;
+      const selectedBlockStillExists =
+        current.selectedBlockId &&
+        currentSelectedPage?.blocks.some((block) => block.id === current.selectedBlockId);
+
+      return {
+        ...current,
+        pages: nextPages,
+        selectedBlockId: selectedBlockStillExists
+          ? current.selectedBlockId
+          : currentSelectedPage?.blocks[0]?.id ?? null
+      };
+    });
+  }
+
   function deleteSelectedBlock() {
     if (!selectedPage || !selectedBlock) {
       return;
     }
 
-    commitBuilder((current) => ({
-      ...current,
-      pages: current.pages.map((page) => {
-        if (page.id !== selectedPage.id) {
-          return page;
-        }
-
-        const nextBlocks = page.blocks.filter((block) => block.id !== selectedBlock.id);
-
-        return {
-          ...page,
-          blocks: nextBlocks
-        };
-      }),
-      selectedBlockId:
-        selectedPage.blocks.filter((block) => block.id !== selectedBlock.id)[0]?.id ?? null
-    }));
+    deleteBlock(selectedPage.id, selectedBlock.id);
   }
 
-  function moveBlock(pageId: string, draggedBlockId: string, targetBlockId: string) {
+  function moveBlock(
+    pageId: string,
+    draggedBlockId: string,
+    targetBlockId: string,
+    placement: "before" | "after" = "before"
+  ) {
     commitBuilder((current) => ({
       ...current,
       pages: current.pages.map((page) => {
@@ -630,7 +647,18 @@ export function EpkWorkspaceView({
 
         const nextBlocks = [...page.blocks];
         const [movedBlock] = nextBlocks.splice(sourceIndex, 1);
-        nextBlocks.splice(targetIndex, 0, movedBlock);
+        let insertIndex = targetIndex;
+
+        if (sourceIndex < targetIndex) {
+          insertIndex -= 1;
+        }
+
+        if (placement === "after") {
+          insertIndex += 1;
+        }
+
+        insertIndex = Math.max(0, Math.min(insertIndex, nextBlocks.length));
+        nextBlocks.splice(insertIndex, 0, movedBlock);
 
         return {
           ...page,
@@ -1489,6 +1517,128 @@ export function EpkWorkspaceView({
                     }
                   />
                 </div>
+              </div>
+            ) : null}
+          </SectionCard>
+
+          <SectionCard
+            title={t(locale, "Structure de page", "Page structure")}
+            description={t(
+              locale,
+              "Glisse les blocs pour les reordonner, clique pour les selectionner, supprime-les ici si besoin.",
+              "Drag blocks to reorder them, click to select them, and delete them here when needed."
+            )}
+          >
+            {selectedPage ? (
+              <div className="space-y-2">
+                {selectedPage.blocks.map((block) => {
+                  const fallbackTitle =
+                    epkBuilderBlockCatalog.find((entry) => entry.type === block.type)?.title ??
+                    block.type;
+
+                  return (
+                    <div
+                      key={block.id}
+                      draggable={!block.locked}
+                      onDragStart={(event) => {
+                        if (block.locked) {
+                          return;
+                        }
+
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({ pageId: selectedPage.id, blockId: block.id })
+                        );
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+
+                        try {
+                          const payload = JSON.parse(
+                            event.dataTransfer.getData("application/json")
+                          ) as { pageId: string; blockId: string };
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          const placement =
+                            event.clientY >= rect.top + rect.height / 2 ? "after" : "before";
+
+                          if (
+                            payload.pageId === selectedPage.id &&
+                            payload.blockId &&
+                            payload.blockId !== block.id
+                          ) {
+                            moveBlock(selectedPage.id, payload.blockId, block.id, placement);
+                          }
+                        } catch {
+                          // noop
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 rounded-[22px] border px-3 py-3 transition",
+                        selectedBlock?.id === block.id
+                          ? "border-coral-500/35 bg-coral-500/10"
+                          : "border-white/8 bg-white/[0.03]"
+                      )}
+                    >
+                      <GripVertical className="h-4 w-4 shrink-0 text-mist-300" />
+                      <button
+                        type="button"
+                        onClick={() => selectBlock(selectedPage.id, block.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <p className="truncate text-sm font-medium text-mist-50">
+                          {block.title || fallbackTitle}
+                        </p>
+                        <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-mist-300">
+                          {block.type}
+                          {block.locked ? ` • ${t(locale, "verrouille", "locked")}` : ""}
+                          {!block.visible ? ` • ${t(locale, "masque", "hidden")}` : ""}
+                        </p>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => deleteBlock(selectedPage.id, block.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+
+                {selectedPage.blocks.length ? (
+                  <div
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+
+                      try {
+                        const payload = JSON.parse(
+                          event.dataTransfer.getData("application/json")
+                        ) as { pageId: string; blockId: string };
+                        const lastBlock = selectedPage.blocks[selectedPage.blocks.length - 1];
+
+                        if (
+                          payload.pageId === selectedPage.id &&
+                          payload.blockId &&
+                          lastBlock &&
+                          payload.blockId !== lastBlock.id
+                        ) {
+                          moveBlock(selectedPage.id, payload.blockId, lastBlock.id, "after");
+                        }
+                      } catch {
+                        // noop
+                      }
+                    }}
+                    className="rounded-[22px] border border-dashed border-white/10 px-4 py-3 text-center text-xs uppercase tracking-[0.22em] text-mist-300"
+                  >
+                    {t(locale, "Deposer ici pour envoyer en bas", "Drop here to move to bottom")}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </SectionCard>
