@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   Download,
@@ -59,6 +59,16 @@ const categoryOrder: Array<EpkBuilderBlockCatalogEntry["category"]> = [
   "Live",
   "Contact"
 ];
+
+const canvasDeviceWidths = {
+  desktop: 1320,
+  tablet: 900,
+  mobile: 430
+} as const;
+
+function clampZoom(value: number) {
+  return Math.min(1.4, Math.max(0.35, Number(value.toFixed(2))));
+}
 
 function buildRowId(prefix: string) {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -322,6 +332,7 @@ export function EpkWorkspaceView({
 
   const [libraryQuery, setLibraryQuery] = useState("");
   const [zoom, setZoom] = useState(1);
+  const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
   const [showGrid, setShowGrid] = useState(true);
   const [showGuides, setShowGuides] = useState(true);
   const [assistantReply, setAssistantReply] = useState("");
@@ -331,6 +342,7 @@ export function EpkWorkspaceView({
   const historyRef = useRef<EpkBuilderState[]>([]);
   const futureRef = useRef<EpkBuilderState[]>([]);
   const copiedBlockRef = useRef<EpkBuilderBlock | null>(null);
+  const canvasViewportRef = useRef<HTMLDivElement | null>(null);
 
   const selectedPage =
     epkBuilder.pages.find((page) => page.id === epkBuilder.selectedPageId) ||
@@ -375,6 +387,8 @@ export function EpkWorkspaceView({
   const favoriteBlocks = epkBuilder.favoriteBlockTypes
     .map((type) => epkBuilderBlockCatalog.find((entry) => entry.type === type))
     .filter(Boolean) as EpkBuilderBlockCatalogEntry[];
+  const canvasBaseWidth = canvasDeviceWidths[epkBuilder.deviceMode];
+  const canvasFrameWidth = Math.round(canvasBaseWidth * zoom);
 
   function commitBuilder(
     recipe: (current: EpkBuilderState) => EpkBuilderState,
@@ -730,6 +744,18 @@ export function EpkWorkspaceView({
     setAppOrigin(window.location.origin);
   }, []);
 
+  const fitCanvasToViewport = useCallback(() => {
+    const viewport = canvasViewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const availableWidth = Math.max(viewport.clientWidth - 20, 280);
+    const nextZoom = clampZoom(availableWidth / canvasBaseWidth);
+    setZoom(nextZoom);
+  }, [canvasBaseWidth]);
+
   useEffect(() => {
     if (!epkBuilder.publishedSlug && (epkProfile.bandName || workspaceName)) {
       commitBuilder(
@@ -813,6 +839,21 @@ export function EpkWorkspaceView({
     window.addEventListener("keydown", handleKeyboard);
     return () => window.removeEventListener("keydown", handleKeyboard);
   }, [epkBuilder, selectedBlock, selectedPage]);
+
+  useEffect(() => {
+    if (zoomMode !== "fit") {
+      return;
+    }
+
+    fitCanvasToViewport();
+
+    function handleResize() {
+      fitCanvasToViewport();
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [fitCanvasToViewport, zoomMode, selectedPage?.id]);
 
   const previewUrl = `/epk/${epkBuilder.publishedSlug || createPublishedEpkSlug(epkProfile.bandName || workspaceName)}`;
   const absolutePreviewUrl = appOrigin ? `${appOrigin}${previewUrl}` : previewUrl;
@@ -902,7 +943,7 @@ export function EpkWorkspaceView({
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[290px_minmax(0,1fr)_360px]">
+      <div className="grid gap-5 xl:grid-cols-[250px_minmax(0,1fr)_320px]">
         <div className="space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-2 no-scrollbar">
           <SectionCard
             title={t(locale, "Bibliotheque", "Library")}
@@ -1093,15 +1134,16 @@ export function EpkWorkspaceView({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setZoomMode("fit");
                     commitBuilder(
                       (current) => ({
                         ...current,
                         deviceMode: "desktop"
                       }),
                       { trackHistory: false }
-                    )
-                  }
+                    );
+                  }}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs uppercase tracking-[0.2em]",
                     epkBuilder.deviceMode === "desktop"
@@ -1114,15 +1156,16 @@ export function EpkWorkspaceView({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setZoomMode("fit");
                     commitBuilder(
                       (current) => ({
                         ...current,
                         deviceMode: "tablet"
                       }),
                       { trackHistory: false }
-                    )
-                  }
+                    );
+                  }}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs uppercase tracking-[0.2em]",
                     epkBuilder.deviceMode === "tablet"
@@ -1135,15 +1178,16 @@ export function EpkWorkspaceView({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setZoomMode("fit");
                     commitBuilder(
                       (current) => ({
                         ...current,
                         deviceMode: "mobile"
                       }),
                       { trackHistory: false }
-                    )
-                  }
+                    );
+                  }}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs uppercase tracking-[0.2em]",
                     epkBuilder.deviceMode === "mobile"
@@ -1185,7 +1229,10 @@ export function EpkWorkspaceView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setZoom(1)}
+                  onClick={() => {
+                    setZoomMode("fit");
+                    fitCanvasToViewport();
+                  }}
                   className="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs uppercase tracking-[0.2em] text-mist-100"
                 >
                   Fit
@@ -1197,18 +1244,21 @@ export function EpkWorkspaceView({
               <FieldLabel>{t(locale, "Zoom", "Zoom")}</FieldLabel>
               <input
                 type="range"
-                min="0.7"
-                max="1.15"
-                step="0.05"
+                min="0.35"
+                max="1.4"
+                step="0.01"
                 value={zoom}
-                onChange={(event) => setZoom(Number(event.target.value))}
+                onChange={(event) => {
+                  setZoomMode("manual");
+                  setZoom(clampZoom(Number(event.target.value)));
+                }}
                 className="w-full accent-coral-500"
               />
               <span className="text-xs text-mist-300">{Math.round(zoom * 100)}%</span>
             </div>
           </SectionCard>
 
-          <Card className="overflow-hidden p-4">
+          <Card className="overflow-hidden p-3 lg:p-4">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {epkBuilder.pages.map((page) => (
                 <button
@@ -1227,7 +1277,7 @@ export function EpkWorkspaceView({
               ))}
             </div>
 
-            <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[#060709] p-4 sm:p-6">
+            <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[#060709] p-3 sm:p-4 lg:p-6">
               {showGrid ? (
                 <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:22px_22px]" />
               ) : null}
@@ -1237,17 +1287,14 @@ export function EpkWorkspaceView({
                   <div className="pointer-events-none absolute left-0 top-1/2 h-px w-full bg-white/8" />
                 </>
               ) : null}
-              <div className="relative h-[68vh] min-h-[460px] max-h-[860px] overflow-auto rounded-[28px] bg-[#040506] p-3 sm:p-5">
+              <div
+                ref={canvasViewportRef}
+                className="relative h-[72vh] min-h-[520px] max-h-[900px] overflow-auto rounded-[28px] bg-[#040506] p-2 sm:p-4 lg:p-5"
+              >
                 <div
-                  className="mx-auto w-full transition-[max-width] duration-200"
+                  className="mx-auto transition-[width] duration-200"
                   style={{
-                    maxWidth: `${
-                      (epkBuilder.deviceMode === "desktop"
-                        ? 1180
-                        : epkBuilder.deviceMode === "tablet"
-                          ? 820
-                          : 420) * zoom
-                    }px`
+                    width: `${canvasFrameWidth}px`
                   }}
                 >
                   <EpkBuilderRenderer

@@ -32,7 +32,7 @@ export default async function WorkspaceLayout({
     >
       <div
         data-workspace-layout="true"
-        className="mx-auto flex min-h-screen max-w-[1560px] flex-col gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:flex-row lg:gap-6 lg:px-8"
+        className="flex min-h-screen w-full max-w-none flex-col gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:flex-row lg:gap-6 lg:px-8"
       >
         <Sidebar
           locale={locale}
