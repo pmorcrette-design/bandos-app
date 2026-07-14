@@ -10,6 +10,11 @@ import {
   type TaskItem,
   type TeamMember
 } from "@/lib/mock-data";
+import {
+  buildDefaultEpkBuilder,
+  normalizeEpkBuilder,
+  type EpkBuilderState
+} from "@/lib/epk-builder";
 import type { ImportedTourStop } from "@/lib/tours/import-types";
 import { normalizeCurrency, type SupportedCurrency } from "@/lib/utils";
 
@@ -335,6 +340,7 @@ export type BandosWorkspaceData = {
   workspaceTasks: EditableTaskItem[];
   uploadedDocuments: UploadedDocumentEntry[];
   epkProfile: EpkProfile;
+  epkBuilder: EpkBuilderState;
 };
 
 export type BandosWorkspaceDataRecord = {
@@ -1337,7 +1343,8 @@ export function buildInitialWorkspaceData(): BandosWorkspaceData {
     merchPurchaseOrders: [],
     workspaceTasks: defaultTasks.map((task) => normalizeEditableTaskItem(task)),
     uploadedDocuments: [],
-    epkProfile: buildEmptyEpkProfile()
+    epkProfile: buildEmptyEpkProfile(),
+    epkBuilder: buildDefaultEpkBuilder()
   };
 }
 
@@ -1354,7 +1361,8 @@ export function buildEmptyWorkspaceData(): BandosWorkspaceData {
     merchPurchaseOrders: [],
     workspaceTasks: [],
     uploadedDocuments: [],
-    epkProfile: buildEmptyEpkProfile()
+    epkProfile: buildEmptyEpkProfile(),
+    epkBuilder: buildDefaultEpkBuilder()
   };
 }
 
@@ -1406,7 +1414,8 @@ export function normalizeWorkspaceData(
       snapshot?.uploadedDocuments?.map((entry) => ({
         ...normalizeUploadedDocumentEntry(entry)
       })) ?? [],
-    epkProfile: normalizeEpkProfile(snapshot?.epkProfile)
+    epkProfile: normalizeEpkProfile(snapshot?.epkProfile),
+    epkBuilder: normalizeEpkBuilder(snapshot?.epkBuilder)
   };
 }
 

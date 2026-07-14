@@ -171,6 +171,32 @@ export async function getWorkspaceUIRecord(workspaceId: string) {
   };
 }
 
+export async function getPublishedWorkspaceEpkRecordBySlug(siteSlug: string) {
+  const normalizedSlug = siteSlug.trim().toLowerCase();
+
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const store = await readStore();
+
+  for (const record of store.workspaces) {
+    const snapshot = normalizeWorkspaceData(record.snapshot);
+
+    if (
+      snapshot.epkBuilder.published &&
+      snapshot.epkBuilder.publishedSlug.toLowerCase() === normalizedSlug
+    ) {
+      return {
+        ...record,
+        snapshot
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function replaceWorkspaceUIRecord(payload: {
   workspaceId: string;
   snapshot: BandosWorkspaceData;

@@ -57,29 +57,16 @@ export function resolveEpkProfile(
   }
 ) {
   const bandName = profile.bandName.trim() || fallback.workspaceName;
-  const genre = profile.genre.trim() || "Add your genre";
-  const origin = profile.origin.trim() || "Add your city / country";
+  const genre = profile.genre.trim();
+  const origin = profile.origin.trim();
   const foundedYear = profile.foundedYear.trim() || "";
   const displayLogo = profile.logoUrl?.trim() || fallback.workspaceLogo;
   const socialRows = getSocialRows(profile);
-  const members =
-    profile.members.length > 0
-      ? profile.members
-      : [{ id: "placeholder-member", name: "Add your members", role: "" }];
-  const sharedStageWith =
-    profile.sharedStageWith.length > 0
-      ? profile.sharedStageWith
-      : ["Add key artists you played with"];
-  const releases =
-    profile.releases.length > 0
-      ? profile.releases
-      : [{ id: "placeholder-release", year: "2026", title: "Add your release", format: "EP" }];
-  const pressQuotes =
-    profile.pressQuotes.length > 0
-      ? profile.pressQuotes
-      : [{ id: "placeholder-quote", source: "Press review", quote: "Add a real quote or media highlight." }];
-  const assetList =
-    profile.assetList.length > 0 ? profile.assetList : ["Press photos", "Logo pack", "Streaming links"];
+  const members = profile.members;
+  const sharedStageWith = profile.sharedStageWith;
+  const releases = profile.releases;
+  const pressQuotes = profile.pressQuotes;
+  const assetList = profile.assetList;
 
   return {
     bandName,
@@ -87,17 +74,14 @@ export function resolveEpkProfile(
     origin,
     foundedYear,
     displayLogo,
-    bio:
-      profile.bio.trim() ||
-      "Add your touring bio, release story, and live positioning here.",
+    bio: profile.bio.trim(),
     members,
     sharedStageWith,
     releases,
     pressQuotes,
     assetList,
-    supportTitle: profile.supportTitle.trim() || "Support",
-    supportSubtitle:
-      profile.supportSubtitle.trim() || "Add a support message, campaign, or partner visual.",
+    supportTitle: profile.supportTitle.trim(),
+    supportSubtitle: profile.supportSubtitle.trim(),
     contactPhone: profile.contactPhone.trim(),
     contactEmail: profile.contactEmail.trim(),
     website: profile.website.trim(),
@@ -266,12 +250,12 @@ export function PremiumEpkDocument({
       data-epk-print-root="true"
       className={cn(
         "space-y-6",
-        printMode ? "mx-auto w-[210mm]" : "mx-auto w-full max-w-[980px]"
+        printMode ? "mx-auto w-[297mm]" : "mx-auto w-full max-w-[1280px]"
       )}
     >
       <section
         data-epk-print-page="true"
-        className="relative aspect-[210/297] overflow-hidden rounded-[36px] border border-white/10 bg-[#121212] text-white shadow-card"
+        className="relative aspect-[297/210] overflow-hidden rounded-[36px] border border-white/10 bg-[#121212] text-white shadow-card"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_20%,rgba(255,255,255,0.08),transparent_18%),radial-gradient(circle_at_12%_0%,rgba(244,175,42,0.18),transparent_28%)]" />
         <div className="absolute -right-[18%] top-[12%] h-[42%] w-[42%] rounded-full border border-white/10 opacity-35" />
@@ -324,15 +308,7 @@ export function PremiumEpkDocument({
                     <span>{value}</span>
                   </div>
                 ))
-              ) : (
-                <p className="text-sm uppercase tracking-[0.28em] text-white/55">
-                  {t(
-                    locale,
-                    "Ajoute téléphone, mail ou site pour finaliser la cover",
-                    "Add phone, email, or website to complete the cover"
-                  )}
-                </p>
-              )}
+              ) : null}
             </div>
             <div className="flex h-28 w-44 items-center justify-end">
               <img
@@ -349,7 +325,7 @@ export function PremiumEpkDocument({
         data-epk-print-page="true"
         className="overflow-hidden rounded-[36px] border border-white/10 bg-[#121212] text-white shadow-card"
       >
-        <div className="grid aspect-[210/297] grid-rows-[0.97fr_0.9fr_0.72fr]">
+        <div className="grid aspect-[297/210] grid-rows-[0.97fr_0.9fr_0.72fr]">
           <div className="grid grid-cols-[1.25fr_1fr]">
             <VisualTile
               src={resolved.liveImageUrl}
@@ -429,7 +405,7 @@ export function PremiumEpkDocument({
         data-epk-print-page="true"
         className="overflow-hidden rounded-[36px] border border-white/10 bg-[#121212] text-white shadow-card"
       >
-        <div className="grid aspect-[210/297] grid-rows-[0.95fr_0.95fr_1fr_auto]">
+        <div className="grid aspect-[297/210] grid-rows-[0.95fr_0.95fr_1fr_auto]">
           <div className="grid grid-cols-[1.25fr_1fr]">
             <VisualTile
               src={resolved.detailImageUrl}
@@ -512,9 +488,7 @@ export function PremiumEpkDocument({
                       {row.label} • {row.value.replace(/^https?:\/\//, "")}
                     </p>
                   ))
-                ) : (
-                  <p>{t(locale, "Ajoute tes liens sociaux", "Add your social links")}</p>
-                )}
+                ) : null}
               </div>
             </div>
             <div className="space-y-2">

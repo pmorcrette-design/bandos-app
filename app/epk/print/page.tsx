@@ -26,8 +26,11 @@ export default async function EpkPrintPage({
     <EpkPrintShell
       locale={locale}
       profile={record.snapshot.epkProfile}
+      builder={record.snapshot.epkBuilder}
       workspaceName={session.workspace}
       workspaceLogo={session.logo}
+      importedShowFolders={record.snapshot.importedShowFolders}
+      uploadedDocuments={record.snapshot.uploadedDocuments}
       autoprint={params.autoprint === "1"}
     />
   );

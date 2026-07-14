@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 
+import { normalizeEpkBuilder, type EpkBuilderState } from "@/lib/epk-builder";
 import type { ImportedTourStop } from "@/lib/tours/import-types";
 import { normalizeCurrency, type SupportedCurrency } from "@/lib/utils";
 import {
@@ -239,6 +240,7 @@ type BandosUIState = BandosWorkspaceData & {
   ) => void;
   deleteUploadedDocument: (id: string) => void;
   updateEpkProfile: (patch: Partial<EpkProfile>) => void;
+  replaceEpkBuilder: (builder: EpkBuilderState) => void;
   addWorkspaceTask: (payload: Omit<EditableTaskItem, "id" | "comments" | "attachments"> & {
     comments?: number;
     attachments?: number;
@@ -389,7 +391,8 @@ export const getWorkspaceDataSnapshot = (state: BandosUIState) => ({
   merchPurchaseOrders: state.merchPurchaseOrders,
   workspaceTasks: state.workspaceTasks,
   uploadedDocuments: state.uploadedDocuments,
-  epkProfile: state.epkProfile
+  epkProfile: state.epkProfile,
+  epkBuilder: state.epkBuilder
 });
 
 export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
@@ -1171,6 +1174,10 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
         ...state.epkProfile,
         ...patch
       })
+    })),
+  replaceEpkBuilder: (builder) =>
+    set(() => ({
+      epkBuilder: normalizeEpkBuilder(builder)
     })),
   addWorkspaceTask: (payload) =>
     set((state) => ({
