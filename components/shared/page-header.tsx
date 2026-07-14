@@ -15,12 +15,12 @@ export function PageHeader({
 }) {
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div className="max-w-3xl">
+      <div className="max-w-4xl min-[1800px]:max-w-5xl">
         {eyebrow ? <Badge tone="accent">{eyebrow}</Badge> : null}
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-mist-50 sm:text-3xl lg:text-[2.15rem]">
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-mist-50 sm:text-3xl lg:text-[2.15rem] min-[1800px]:text-[2.55rem]">
           {title}
         </h1>
-        <p className="mt-3 text-sm leading-7 text-mist-300">
+        <p className="mt-3 text-sm leading-7 text-mist-300 min-[1800px]:text-base min-[1800px]:leading-8">
           {description}
         </p>
       </div>

@@ -35,7 +35,7 @@ export function Topbar({
 
   return (
     <div className="space-y-4" data-shell-topbar="true">
-      <div className="rounded-[24px] border border-white/8 bg-black/25 px-3 py-3 shadow-card backdrop-blur-2xl sm:rounded-[28px] sm:px-5 sm:py-4">
+      <div className="rounded-[24px] border border-white/8 bg-black/25 px-3 py-3 shadow-card backdrop-blur-2xl sm:rounded-[28px] sm:px-5 sm:py-4 min-[1800px]:px-6 min-[1800px]:py-5 min-[2200px]:px-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <button
@@ -56,7 +56,7 @@ export function Topbar({
               <p className="truncate text-xs uppercase tracking-[0.24em] text-mist-300">
                 {workspaceName}
               </p>
-              <p className="mt-1 truncate text-base font-medium text-mist-50 sm:text-lg">
+              <p className="mt-1 truncate text-base font-medium text-mist-50 sm:text-lg min-[1800px]:text-[1.2rem]">
                 {t(locale, "Bon retour", "Welcome back")}, {userName}
               </p>
             </div>

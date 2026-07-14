@@ -158,7 +158,7 @@ export function Sidebar({
       </aside>
       <aside
         data-shell-sidebar="true"
-        className="sticky top-4 hidden h-[calc(100vh-2rem)] w-[272px] shrink-0 overflow-hidden rounded-[30px] border border-white/8 bg-black/30 p-5 shadow-shell backdrop-blur-2xl lg:flex lg:flex-col"
+        className="sticky top-4 hidden h-[calc(100vh-2rem)] w-[clamp(272px,15vw,360px)] shrink-0 overflow-hidden rounded-[30px] border border-white/8 bg-black/30 p-[clamp(1.25rem,1vw,1.75rem)] shadow-shell backdrop-blur-2xl lg:flex lg:flex-col"
       >
         {renderSidebarBody()}
       </aside>
