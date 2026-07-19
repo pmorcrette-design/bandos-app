@@ -15,7 +15,7 @@ function canManageTicketing(role: string, isBandosAdmin: boolean) {
 }
 
 function isProvider(value: string): value is TicketingProvider {
-  return value === "ticket-tailor" || value === "eventbrite";
+  return value === "weezevent";
 }
 
 export async function GET() {
@@ -71,21 +71,16 @@ export async function POST(request: Request) {
   const credentials = body.credentials ?? {};
 
   if (
-    provider === "ticket-tailor" &&
-    !credentials.apiKey?.trim()
+    provider === "weezevent" &&
+    (!credentials.apiKey?.trim() ||
+      !credentials.username?.trim() ||
+      !credentials.password?.trim())
   ) {
     return NextResponse.json(
-      { error: "Ticket Tailor requires an API key." },
-      { status: 400 }
-    );
-  }
-
-  if (
-    provider === "eventbrite" &&
-    !credentials.privateToken?.trim()
-  ) {
-    return NextResponse.json(
-      { error: "Eventbrite requires a private token." },
+      {
+        error:
+          "Weezevent requires an API key, a username and a password."
+      },
       { status: 400 }
     );
   }

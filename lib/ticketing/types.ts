@@ -1,4 +1,4 @@
-export type TicketingProvider = "ticket-tailor" | "eventbrite";
+export type TicketingProvider = "ticket-tailor" | "eventbrite" | "weezevent";
 
 export type TicketingIntegrationStatus = "connected" | "needs-attention" | "disconnected";
 
@@ -16,6 +16,8 @@ export type TicketingCredentialInput = {
   apiKey?: string;
   privateToken?: string;
   organizerId?: string;
+  username?: string;
+  password?: string;
   webhookSecret?: string;
 };
 

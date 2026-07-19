@@ -4,7 +4,7 @@ import { handleTicketingWebhook } from "@/lib/server/ticketing-store";
 import type { TicketingProvider } from "@/lib/ticketing/types";
 
 function isProvider(value: string): value is TicketingProvider {
-  return value === "ticket-tailor" || value === "eventbrite";
+  return value === "weezevent";
 }
 
 export async function POST(

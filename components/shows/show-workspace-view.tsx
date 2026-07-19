@@ -105,6 +105,8 @@ type TicketingFormState = {
   apiKey: string;
   privateToken: string;
   organizerId: string;
+  username: string;
+  password: string;
   webhookSecret: string;
 };
 
@@ -501,11 +503,13 @@ function getTicketingSalesSnapshot(
 
 function buildTicketingFormDefaults(): TicketingFormState {
   return {
-    provider: "ticket-tailor",
+    provider: "weezevent",
     label: "",
     apiKey: "",
     privateToken: "",
     organizerId: "",
+    username: "",
+    password: "",
     webhookSecret: ""
   };
 }
@@ -1303,6 +1307,8 @@ export function ShowWorkspaceView({
             apiKey: ticketingForm.apiKey,
             privateToken: ticketingForm.privateToken,
             organizerId: ticketingForm.organizerId,
+            username: ticketingForm.username,
+            password: ticketingForm.password,
             webhookSecret: ticketingForm.webhookSecret
           }
         })
@@ -3349,8 +3355,8 @@ export function ShowWorkspaceView({
                 <p className="mt-2 text-sm text-mist-300">
                   {t(
                     locale,
-                    "Connecte Ticket Tailor ou Eventbrite, lie l'event externe, puis synchronise revenus, frais, ordres et attendees.",
-                    "Connect Ticket Tailor or Eventbrite, link the external event, then sync revenue, fees, orders, and attendees."
+                    "Connecte Weezevent, lie l'event externe, puis synchronise revenus, frais, ordres et attendees.",
+                    "Connect Weezevent, link the external event, then sync revenue, fees, orders, and attendees."
                   )}
                 </p>
               </div>
@@ -3422,11 +3428,8 @@ export function ShowWorkspaceView({
                         }
                         className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
                       >
-                        <option value="ticket-tailor" className="bg-graphite-900">
-                          Ticket Tailor
-                        </option>
-                        <option value="eventbrite" className="bg-graphite-900">
-                          Eventbrite
+                        <option value="weezevent" className="bg-graphite-900">
+                          Weezevent
                         </option>
                       </select>
                     </label>
@@ -3445,54 +3448,61 @@ export function ShowWorkspaceView({
                         placeholder="BandOS Ticketing"
                       />
                     </label>
-                    {ticketingForm.provider === "ticket-tailor" ? (
-                      <label className="space-y-2 md:col-span-2">
-                        <span className="text-sm text-mist-200">API key</span>
-                        <Input
-                          value={ticketingForm.apiKey}
-                          onChange={(event) =>
-                            setTicketingForm((current) => ({
-                              ...current,
-                              apiKey: event.target.value
-                            }))
-                          }
-                          placeholder="tt_live_..."
-                        />
-                      </label>
-                    ) : (
+                    {ticketingForm.provider === "weezevent" ? (
                       <>
                         <label className="space-y-2 md:col-span-2">
-                          <span className="text-sm text-mist-200">
-                            {t(locale, "Private token", "Private token")}
-                          </span>
+                          <span className="text-sm text-mist-200">API key</span>
                           <Input
-                            value={ticketingForm.privateToken}
+                            value={ticketingForm.apiKey}
                             onChange={(event) =>
                               setTicketingForm((current) => ({
                                 ...current,
-                                privateToken: event.target.value
+                                apiKey: event.target.value
                               }))
                             }
-                            placeholder="EB_PRIVATE_TOKEN"
+                            placeholder="WEEZEVENT_API_KEY"
                           />
                         </label>
-                        <label className="space-y-2 md:col-span-2">
+                        <label className="space-y-2">
                           <span className="text-sm text-mist-200">
-                            Organizer ID
+                            {t(locale, "Identifiant Weezevent", "Weezevent username")}
                           </span>
                           <Input
-                            value={ticketingForm.organizerId}
+                            value={ticketingForm.username}
                             onChange={(event) =>
                               setTicketingForm((current) => ({
                                 ...current,
-                                organizerId: event.target.value
+                                username: event.target.value
                               }))
                             }
-                            placeholder="Optional organizer id"
+                            placeholder="organizer@email.com"
                           />
                         </label>
+                        <label className="space-y-2">
+                          <span className="text-sm text-mist-200">
+                            {t(locale, "Mot de passe Weezevent", "Weezevent password")}
+                          </span>
+                          <Input
+                            type="password"
+                            value={ticketingForm.password}
+                            onChange={(event) =>
+                              setTicketingForm((current) => ({
+                                ...current,
+                                password: event.target.value
+                              }))
+                            }
+                            placeholder="••••••••"
+                          />
+                        </label>
+                        <div className="md:col-span-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                          {t(
+                            locale,
+                            "Weezevent demande une clé API partenaire, plus un login organizer/partner. La synchro live passe ici par sync manuel, la doc officielle publique ne détaille pas de webhooks ticketing équivalents.",
+                            "Weezevent requires a partner API key plus an organizer/partner login. Live refresh currently relies on manual sync here because the public docs do not document equivalent ticketing webhooks."
+                          )}
+                        </div>
                       </>
-                    )}
+                    ) : null}
                     <label className="space-y-2 md:col-span-2">
                       <span className="text-sm text-mist-200">
                         {t(locale, "Webhook secret", "Webhook secret")}
