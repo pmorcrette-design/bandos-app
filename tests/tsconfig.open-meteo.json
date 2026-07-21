@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "outDir": "../.tmp-open-meteo-tests",
+    "rootDir": "..",
+    "incremental": false,
+    "noEmit": false
+  },
+  "include": ["open-meteo.test.ts", "../lib/open-meteo.ts"]
+}

@@ -162,6 +162,7 @@ type EditableLocalAct = {
   name: string;
   role: ImportedLocalAct["role"];
   fee: string;
+  setDurationMinutes: string;
   crmContactId: string | null;
 };
 
@@ -309,6 +310,9 @@ export function ImportedShowFolders({
   const addStandaloneShowFolder = useBandosUIStore(
     (state) => state.addStandaloneShowFolder
   );
+  const addTourShowFolder = useBandosUIStore(
+    (state) => state.addTourShowFolder
+  );
   const deleteImportedShowFolder = useBandosUIStore(
     (state) => state.deleteImportedShowFolder
   );
@@ -329,6 +333,8 @@ export function ImportedShowFolders({
   const [saveMessage, setSaveMessage] = useState("");
   const [tourSaveMessage, setTourSaveMessage] = useState("");
   const [createStandaloneOpen, setCreateStandaloneOpen] = useState(false);
+  const [createShowTourChoice, setCreateShowTourChoice] = useState("");
+  const [createNewTourName, setCreateNewTourName] = useState("");
   const [createStandaloneVenue, setCreateStandaloneVenue] = useState("");
   const [createStandaloneDate, setCreateStandaloneDate] = useState("");
   const [createStandaloneCity, setCreateStandaloneCity] = useState("");
@@ -502,13 +508,21 @@ export function ImportedShowFolders({
     [crmCatalog]
   );
 
-  function resetStandaloneForm() {
+  function resetStandaloneForm(defaultTourName = "") {
+    const defaultTour = tourGroups.find(
+      (group) => group.tourName === defaultTourName
+    );
+
+    setCreateShowTourChoice(defaultTourName);
+    setCreateNewTourName("");
     setCreateStandaloneVenue("");
     setCreateStandaloneDate("");
     setCreateStandaloneCity("");
     setCreateStandaloneCountry("");
     setCreateStandaloneAddress("");
-    setCreateStandaloneCurrency(currency);
+    setCreateStandaloneCurrency(
+      defaultTour?.folders[0]?.tourCurrency ?? currency
+    );
     setCreateStandaloneError("");
   }
 
@@ -580,6 +594,10 @@ export function ImportedShowFolders({
         name: act.name,
         role: act.role,
         fee: formatEditableAmount(act.fee, effectiveCurrency),
+        setDurationMinutes:
+          typeof act.setDurationMinutes === "number"
+            ? String(act.setDurationMinutes)
+            : "",
         crmContactId: act.crmContactId ?? null
       }))
     );
@@ -640,6 +658,7 @@ export function ImportedShowFolders({
         name: "",
         role: getNewLocalActRole(current.length),
         fee: "",
+        setDurationMinutes: "",
         crmContactId: null
       }
     ]);
@@ -670,6 +689,7 @@ export function ImportedShowFolders({
           name: selectedBand.company,
           role: crmBandRole,
           fee: formatEditableAmount(selectedBand.defaultFee, effectiveCurrency),
+          setDurationMinutes: "",
           crmContactId: selectedBand.id
         }
       ];
@@ -723,6 +743,7 @@ export function ImportedShowFolders({
           parseNumberInput(act.fee) !== null
             ? convertCurrency(parseNumberInput(act.fee) ?? 0, effectiveCurrency, "GBP")
             : null,
+        setDurationMinutes: parseOptionalIntegerInput(act.setDurationMinutes),
         crmContactId: act.crmContactId
       }))
       .filter((act) => act.name || act.fee !== null);
@@ -796,7 +817,7 @@ export function ImportedShowFolders({
     }
   }
 
-  function createStandaloneFolder() {
+  function createShowFolder() {
     const normalizedVenue = createStandaloneVenue.trim();
     const normalizedDate = createStandaloneDate.trim();
 
@@ -811,18 +832,69 @@ export function ImportedShowFolders({
       return;
     }
 
-    const folderId = addStandaloneShowFolder({
+    const requestedTourName =
+      createShowTourChoice === "__new__"
+        ? createNewTourName.trim()
+        : createShowTourChoice.trim();
+
+    if (createShowTourChoice === "__new__" && !requestedTourName) {
+      setCreateStandaloneError(
+        t(
+          locale,
+          "Donne un nom à la nouvelle tournée.",
+          "Enter a name for the new tour."
+        )
+      );
+      return;
+    }
+
+    if (
+      createShowTourChoice === "__new__" &&
+      tourGroups.some(
+        (group) =>
+          group.tourName.trim().toLowerCase() === requestedTourName.toLowerCase()
+      )
+    ) {
+      setCreateStandaloneError(
+        t(
+          locale,
+          "Cette tournée existe déjà : sélectionne-la dans la liste.",
+          "This tour already exists; select it from the list."
+        )
+      );
+      return;
+    }
+
+    const existingTour = tourGroups.find(
+      (group) => group.tourName === requestedTourName
+    );
+    const targetCurrency =
+      existingTour?.folders[0]?.tourCurrency ?? createStandaloneCurrency;
+
+    const showPayload = {
       venue: normalizedVenue,
       date: normalizedDate,
       city: createStandaloneCity.trim(),
       country: createStandaloneCountry.trim(),
       address: createStandaloneAddress.trim(),
-      currency: createStandaloneCurrency
-    });
+      currency: targetCurrency
+    };
+    const folderId = requestedTourName
+      ? addTourShowFolder({
+          ...showPayload,
+          tourName: requestedTourName
+        })
+      : addStandaloneShowFolder(showPayload);
 
     resetStandaloneForm();
     setCreateStandaloneOpen(false);
-    router.push(`/app/shows/date/${encodeURIComponent(folderId)}`);
+    router.push(
+      requestedTourName
+        ? `/app/shows/date/${encodeURIComponent(folderId)}?tour=${encodeURIComponent(
+            requestedTourName
+          )}`
+        : `/app/shows/date/${encodeURIComponent(folderId)}`
+    );
   }
 
   function openShowWorkspace(folderId: string, tourName?: string | null) {
@@ -875,7 +947,7 @@ export function ImportedShowFolders({
             <p className="text-lg font-medium text-mist-50">
               {selectedTour
                 ? t(locale, "Dates de la tournée", "Tour dates")
-                : t(locale, "Tournées et dates uniques", "Tours and single dates")}
+                : t(locale, "Tournées et concerts", "Tours and shows")}
             </p>
             <p className="mt-2 text-sm text-mist-300">
               {selectedTour
@@ -886,8 +958,8 @@ export function ImportedShowFolders({
                   )
                 : t(
                     locale,
-                    "Les imports créent des dossiers tournée et tu peux aussi créer ici des dates uniques à la main.",
-                    "Imports create tour folders and you can also create manual single dates here."
+                    "Ajoute ici une date à une tournée existante, crée une nouvelle tournée ou garde le concert hors tournée.",
+                    "Add a show to an existing tour, create a new tour, or keep the show off-tour."
                   )}
             </p>
           </div>
@@ -903,18 +975,7 @@ export function ImportedShowFolders({
               <ChevronLeft className="h-4 w-4" />
               {t(locale, "Retour aux tournées", "Back to tours")}
             </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={() => {
-                resetStandaloneForm();
-                setCreateStandaloneOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              {t(locale, "Ajouter une date unique", "Add single date")}
-            </Button>
-          )}
+          ) : null}
         </div>
 
         {selectedTour ? (
@@ -992,13 +1053,13 @@ export function ImportedShowFolders({
               <EmptyState
                 title={t(
                   locale,
-                  "Aucune tournée ni date unique pour le moment",
-                  "No tours or single dates yet"
+                  "Aucune tournée ni date pour le moment",
+                  "No tours or shows yet"
                 )}
                 body={t(
                   locale,
-                  "Valide un import depuis Tournée ou crée une date unique manuellement pour commencer à remplir Concerts.",
-                  "Validate an import from Tour or create a manual single date to start filling Shows."
+                  "Clique sur Ajouter une date pour créer une tournée ou un concert hors tournée directement ici.",
+                  "Click Add show to create a tour or an off-tour show directly here."
                 )}
               />
             ) : null}
@@ -1446,6 +1507,45 @@ export function ImportedShowFolders({
             })}
           </div>
         )}
+
+        <Card className="border-coral-400/25 bg-[radial-gradient(circle_at_top_left,rgba(255,111,97,0.13),transparent_55%),rgba(255,255,255,0.025)]">
+          <div className="flex flex-col items-center gap-5 py-3 text-center sm:flex-row sm:text-left">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-coral-300/25 bg-coral-400/10 text-coral-200">
+              <Plus className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-semibold text-mist-50">
+                {selectedTour
+                  ? t(
+                      locale,
+                      `Ajouter une date à ${selectedTour.tourName}`,
+                      `Add a show to ${selectedTour.tourName}`
+                    )
+                  : t(locale, "Ajouter une date", "Add show")}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-mist-300">
+                {t(
+                  locale,
+                  "Crée le concert ici et rattache-le directement à une tournée, sans passer par l’onglet Tournée.",
+                  "Create the show here and attach it directly to a tour without opening the Tour tab."
+                )}
+              </p>
+            </div>
+            <Button
+              type="button"
+              className="shrink-0"
+              onClick={() => {
+                resetStandaloneForm(
+                  selectedTour?.tourName ?? tourGroups[0]?.tourName ?? ""
+                );
+                setCreateStandaloneOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {t(locale, "Ajouter une date", "Add show")}
+            </Button>
+          </div>
+        </Card>
       </div>
 
       <Modal
@@ -1454,14 +1554,71 @@ export function ImportedShowFolders({
           setCreateStandaloneOpen(false);
           resetStandaloneForm();
         }}
-        title={t(locale, "Ajouter une date unique", "Add single date")}
+        title={t(locale, "Ajouter une date", "Add show")}
         description={t(
           locale,
-          "Crée un concert hors tournée directement dans Concerts. Tu pourras ensuite compléter toute la fiche date.",
-          "Create an off-tour show directly in Shows. You can then complete the full show sheet."
+          "Rattache directement le concert à une tournée, sans passer par l'onglet Tournée.",
+          "Attach the show directly to a tour without going through the Tour tab."
         )}
       >
         <div className="space-y-4">
+          <label className="space-y-2">
+            <span className="text-sm text-mist-200">
+              {t(locale, "Rattachement", "Assignment")}
+            </span>
+            <select
+              value={createShowTourChoice}
+              onChange={(event) => {
+                const nextChoice = event.target.value;
+                const matchingTour = tourGroups.find(
+                  (group) => group.tourName === nextChoice
+                );
+
+                setCreateShowTourChoice(nextChoice);
+                setCreateStandaloneError("");
+
+                if (matchingTour?.folders[0]) {
+                  setCreateStandaloneCurrency(
+                    matchingTour.folders[0].tourCurrency
+                  );
+                }
+              }}
+              className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
+            >
+              {tourGroups.map((group) => (
+                <option
+                  key={group.tourName}
+                  value={group.tourName}
+                  className="bg-graphite-900"
+                >
+                  {group.tourName}
+                </option>
+              ))}
+              <option value="__new__" className="bg-graphite-900">
+                {t(locale, "+ Nouvelle tournée", "+ New tour")}
+              </option>
+              <option value="" className="bg-graphite-900">
+                {t(locale, "Hors tournée", "Off-tour")}
+              </option>
+            </select>
+          </label>
+
+          {createShowTourChoice === "__new__" ? (
+            <label className="space-y-2">
+              <span className="text-sm text-mist-200">
+                {t(locale, "Nom de la nouvelle tournée", "New tour name")}
+              </span>
+              <Input
+                value={createNewTourName}
+                onChange={(event) => {
+                  setCreateNewTourName(event.target.value);
+                  setCreateStandaloneError("");
+                }}
+                placeholder={t(locale, "Tournée été 2026", "Summer tour 2026")}
+              />
+            </label>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
               <span className="text-sm text-mist-200">
@@ -1536,6 +1693,10 @@ export function ImportedShowFolders({
               onChange={(event) =>
                 setCreateStandaloneCurrency(event.target.value as SupportedCurrency)
               }
+              disabled={
+                Boolean(createShowTourChoice) &&
+                createShowTourChoice !== "__new__"
+              }
               className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-mist-100 outline-none"
             >
               {(Object.keys(supportedCurrencyMeta) as SupportedCurrency[]).map((code) => (
@@ -1544,6 +1705,16 @@ export function ImportedShowFolders({
                 </option>
               ))}
             </select>
+            {Boolean(createShowTourChoice) &&
+            createShowTourChoice !== "__new__" ? (
+              <span className="block text-xs text-mist-300">
+                {t(
+                  locale,
+                  "Devise héritée de la tournée.",
+                  "Currency inherited from the tour."
+                )}
+              </span>
+            ) : null}
           </label>
 
           {createStandaloneError ? (
@@ -1561,8 +1732,10 @@ export function ImportedShowFolders({
             >
               {t(locale, "Annuler", "Cancel")}
             </Button>
-            <Button type="button" onClick={createStandaloneFolder}>
-              {t(locale, "Créer la date", "Create show")}
+            <Button type="button" onClick={createShowFolder}>
+              {createShowTourChoice
+                ? t(locale, "Ajouter à la tournée", "Add to tour")
+                : t(locale, "Créer la date", "Create show")}
             </Button>
           </div>
         </div>
@@ -1780,7 +1953,7 @@ export function ImportedShowFolders({
                   {localSupportActs.map((act, index) => (
                     <div
                       key={act.id}
-                      className="grid gap-3 rounded-[20px] border border-white/8 bg-black/10 p-3 md:grid-cols-[1.1fr_180px_160px_auto]"
+                      className="grid gap-3 rounded-[20px] border border-white/8 bg-black/10 p-3 md:grid-cols-[1.1fr_150px_130px_130px_auto]"
                     >
                       <label className="space-y-2">
                         <span className="text-xs uppercase tracking-[0.2em] text-mist-300">
@@ -1843,6 +2016,22 @@ export function ImportedShowFolders({
                             })
                           }
                           placeholder="80"
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <span className="text-xs uppercase tracking-[0.2em] text-mist-300">
+                          {t(locale, "Set (min)", "Set (min)")}
+                        </span>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={act.setDurationMinutes}
+                          onChange={(event) =>
+                            updateLocalSupportAct(act.id, {
+                              setDurationMinutes: event.target.value
+                            })
+                          }
+                          placeholder="30"
                         />
                       </label>
                       <div className="flex items-end">

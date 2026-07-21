@@ -75,6 +75,15 @@ type OpsContext = {
   latitude: number;
   longitude: number;
   currentTime: string | null;
+  forecastDate: string | null;
+  forecastTime: string | null;
+  forecastStatus: "forecast" | "unavailable";
+  weatherUnavailableReason:
+    | "invalid-date"
+    | "past-date"
+    | "outside-forecast-range"
+    | "forecast-error"
+    | null;
   temperature: number | null;
   apparentTemperature: number | null;
   humidity: number | null;
@@ -91,6 +100,8 @@ type OpsContext = {
     precipitationProbability: number | null;
   }>;
   warning: string | null;
+  sourceName: string;
+  sourceUrl: string;
 };
 
 type TimelineItem = {
@@ -102,6 +113,7 @@ type TimelineItem = {
     | "soundcheck"
     | "doors"
     | "show"
+    | "opener"
     | "support"
     | "local support"
     | "changeover"
@@ -195,6 +207,40 @@ function getWeatherTone(code: number | null) {
   }
 
   return "accent";
+}
+
+function getWeatherUnavailableLabel(
+  locale: Locale,
+  reason: OpsContext["weatherUnavailableReason"]
+) {
+  switch (reason) {
+    case "outside-forecast-range":
+      return t(
+        locale,
+        "La prévision sera disponible 15 jours avant le concert.",
+        "The forecast will be available 15 days before the show."
+      );
+    case "past-date":
+      return t(
+        locale,
+        "Cette date est passée : aucune prévision live n'est disponible.",
+        "This date has passed, so no live forecast is available."
+      );
+    case "invalid-date":
+      return t(
+        locale,
+        "La date du concert doit être complétée pour charger la météo.",
+        "Complete the show date to load weather."
+      );
+    case "forecast-error":
+      return t(
+        locale,
+        "Open-Meteo ne peut pas fournir la prévision pour le moment.",
+        "Open-Meteo cannot provide the forecast right now."
+      );
+    default:
+      return t(locale, "Prévision indisponible.", "Forecast unavailable.");
+  }
 }
 
 function getCountryGuide(
@@ -499,6 +545,7 @@ function getRunningOrderFallbackLabel(
 ) {
   const labels: Record<ShowRunningOrderEntry["type"], [string, string]> = {
     headliner: ["Headliner", "Headliner"],
+    opener: ["Opener", "Opener"],
     support: ["Support", "Support"],
     "local support": ["Support local", "Local support"],
     changeover: ["Changeover", "Changeover"],
@@ -540,6 +587,7 @@ function getRunningOrderIcon(type: ShowRunningOrderEntry["type"]) {
       return "🟢";
     case "headliner":
       return "🔴";
+    case "opener":
     case "support":
     case "local support":
       return "🔵";
@@ -786,6 +834,15 @@ export function PremiumDaySheet({
   const [opsError, setOpsError] = useState<string | null>(null);
   const [opsResolved, setOpsResolved] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const weatherEventTime = useMemo(
+    () =>
+      show.runningOrder.find((entry) => entry.type === "opener")?.startTime ||
+      show.runningOrder.find((entry) => entry.type === "support")?.startTime ||
+      show.runningOrder.find((entry) => entry.type === "headliner")?.startTime ||
+      show.dayOfShowInfo.doorsTime ||
+      "",
+    [show.dayOfShowInfo.doorsTime, show.runningOrder]
+  );
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowTick(Date.now()), 60_000);
@@ -811,6 +868,8 @@ export function PremiumDaySheet({
             city: show.city,
             country: show.country,
             venue: show.venue,
+            date: show.date,
+            eventTime: weatherEventTime,
             locale
           })
         });
@@ -845,7 +904,15 @@ export function PremiumDaySheet({
     return () => {
       cancelled = true;
     };
-  }, [locale, show.address, show.city, show.country, show.venue]);
+  }, [
+    locale,
+    show.address,
+    show.city,
+    show.country,
+    show.date,
+    show.venue,
+    weatherEventTime
+  ]);
 
   useEffect(() => {
     if (onPrintReady && opsResolved) {
@@ -1345,18 +1412,28 @@ export function PremiumDaySheet({
         <Card>
           <div className="flex items-center gap-3">
             <CloudSun className="h-5 w-5 text-coral-300" />
-            <div>
+            <div className="flex-1">
               <p className="text-lg font-medium text-mist-50">
                 {t(locale, "Weather & daylight", "Weather & daylight")}
               </p>
               <p className="mt-2 text-sm text-mist-300">
                 {t(
                   locale,
-                  "Météo live, vent, humidité, UV et forecast horaire pour préparer la journée.",
-                  "Live weather, wind, humidity, UV, and hourly forecast to prepare the day."
+                  "Prévision Open-Meteo calée sur la date et l'heure du concert.",
+                  "Open-Meteo forecast aligned with the show date and time."
                 )}
               </p>
             </div>
+            {opsContext?.forecastDate ? (
+              <Badge tone="accent">
+                {formatLongDate(
+                  opsContext.forecastDate,
+                  locale,
+                  opsContext.timezone
+                )}
+                {opsContext.forecastTime ? ` • ${opsContext.forecastTime}` : ""}
+              </Badge>
+            ) : null}
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -1385,7 +1462,7 @@ export function PremiumDaySheet({
               </p>
             </div>
             <div className="rounded-[22px] border border-white/8 bg-white/[0.03] p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <div>
                   <p className="flex items-center gap-2 text-sm text-mist-200">
                     <Wind className="h-4 w-4 text-coral-300" />
@@ -1402,6 +1479,28 @@ export function PremiumDaySheet({
                   </p>
                   <p className="mt-2 text-sm text-mist-50">
                     {opsContext?.rainProbability != null ? `${Math.round(opsContext.rainProbability)}%` : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="flex items-center gap-2 text-sm text-mist-200">
+                    <CloudRain className="h-4 w-4 text-coral-300" />
+                    {t(locale, "Humidité", "Humidity")}
+                  </p>
+                  <p className="mt-2 text-sm text-mist-50">
+                    {opsContext?.humidity != null
+                      ? `${Math.round(opsContext.humidity)}%`
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="flex items-center gap-2 text-sm text-mist-200">
+                    <CloudSun className="h-4 w-4 text-coral-300" />
+                    UV
+                  </p>
+                  <p className="mt-2 text-sm text-mist-50">
+                    {opsContext?.uvIndex != null
+                      ? Number(opsContext.uvIndex).toFixed(1)
+                      : "—"}
                   </p>
                 </div>
                 <div>
@@ -1444,10 +1543,38 @@ export function PremiumDaySheet({
               ))
             ) : (
               <p className="text-sm text-mist-300">
-                {t(locale, "Forecast horaire indisponible.", "Hourly forecast unavailable.")}
+                {opsContext?.forecastStatus === "unavailable"
+                  ? getWeatherUnavailableLabel(
+                      locale,
+                      opsContext.weatherUnavailableReason
+                    )
+                  : t(
+                      locale,
+                      "Forecast horaire indisponible.",
+                      "Hourly forecast unavailable."
+                    )}
               </p>
             )}
           </div>
+
+          {opsContext?.sourceUrl ? (
+            <p className="mt-4 text-xs text-mist-300">
+              {t(locale, "Données météo :", "Weather data:")} {" "}
+              <a
+                href={opsContext.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-coral-200 hover:text-coral-100"
+              >
+                {opsContext.sourceName}
+              </a>
+              {t(
+                locale,
+                " • valeurs sélectionnées pour l'horaire du concert.",
+                " • values selected for show time."
+              )}
+            </p>
+          ) : null}
         </Card>
 
         <Card>

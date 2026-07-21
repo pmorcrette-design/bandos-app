@@ -32,6 +32,7 @@ import {
   type Locale
 } from "@/lib/i18n";
 import {
+  buildAutomaticRunningOrder,
   getAttendanceProjectionMetrics,
   getGearChecklistSummary,
   getGuestlistUsage,
@@ -125,6 +126,7 @@ const runningOrderTypes: Array<ShowRunningOrderEntry["type"]> = [
   "load-in",
   "soundcheck",
   "doors",
+  "opener",
   "support",
   "local support",
   "changeover",
@@ -423,6 +425,7 @@ function getGuestlistStatusLabel(locale: Locale, status: ShowGuestlistEntry["sta
 function getRunningOrderTypeLabel(locale: Locale, type: ShowRunningOrderEntry["type"]) {
   const labels: Record<ShowRunningOrderEntry["type"], [string, string]> = {
     headliner: ["headliner", "headliner"],
+    opener: ["opener", "opener"],
     support: ["support", "support"],
     "local support": ["support local", "local support"],
     changeover: ["changeover", "changeover"],
@@ -571,6 +574,12 @@ export function ShowWorkspaceView({
   const [newLocalBandRole, setNewLocalBandRole] = useState<ImportedLocalAct["role"]>("support");
   const [newLocalBandFee, setNewLocalBandFee] = useState("");
   const [localBandMessage, setLocalBandMessage] = useState<string | null>(null);
+  const [automaticGetInTime, setAutomaticGetInTime] = useState("");
+  const [automaticEventStartTime, setAutomaticEventStartTime] = useState("");
+  const [automaticHeadlinerDuration, setAutomaticHeadlinerDuration] = useState("");
+  const [automaticRunningOrderMessage, setAutomaticRunningOrderMessage] = useState<
+    string | null
+  >(null);
   const backTourName = searchParams.get("tour");
   const printMode = searchParams.get("print") === "1";
   const autoprint = searchParams.get("autoprint") === "1";
@@ -766,6 +775,36 @@ export function ShowWorkspaceView({
     setLocalBandMessage(null);
   }, [showFolderId]);
 
+  const automaticDefaultGetInTime =
+    show?.runningOrder.find((entry) => entry.type === "load-in")?.startTime ?? "";
+  const automaticDefaultEventStartTime =
+    show?.dayOfShowInfo.doorsTime ||
+    show?.runningOrder.find((entry) => entry.type === "doors")?.startTime ||
+    "";
+  const automaticDefaultHeadlinerDuration = (() => {
+    const duration = show?.runningOrder.find(
+      (entry) => entry.type === "headliner"
+    )?.durationMinutes;
+
+    if (typeof duration === "number" && duration > 0) {
+      return String(duration);
+    }
+
+    return setlistTotalDuration > 0 ? String(setlistTotalDuration) : "";
+  })();
+
+  useEffect(() => {
+    setAutomaticGetInTime(automaticDefaultGetInTime);
+    setAutomaticEventStartTime(automaticDefaultEventStartTime);
+    setAutomaticHeadlinerDuration(automaticDefaultHeadlinerDuration);
+    setAutomaticRunningOrderMessage(null);
+  }, [
+    automaticDefaultEventStartTime,
+    automaticDefaultGetInTime,
+    automaticDefaultHeadlinerDuration,
+    show?.id
+  ]);
+
   function patchShow(
     patch: Partial<
       Pick<
@@ -875,6 +914,91 @@ export function ShowWorkspaceView({
     currentEntries.splice(targetIndex, 0, draggedRow);
     patchShow({ runningOrder: currentEntries });
     setDraggedRunningOrderId(null);
+  }
+
+  function generateAutomaticRunningOrder() {
+    if (!show) {
+      return;
+    }
+
+    if (!automaticGetInTime || !automaticEventStartTime) {
+      setAutomaticRunningOrderMessage(
+        t(
+          locale,
+          "Renseigne le get in et le début de l'événement.",
+          "Fill in get-in and event start times."
+        )
+      );
+      return;
+    }
+
+    const headlinerDuration = parseOptionalInteger(automaticHeadlinerDuration);
+
+    if (!headlinerDuration) {
+      setAutomaticRunningOrderMessage(
+        t(
+          locale,
+          "Renseigne la durée du set de la tête d'affiche.",
+          "Fill in the headliner set duration."
+        )
+      );
+      return;
+    }
+
+    const missingActDuration = show.localSupportActs.find(
+      (act) => !act.setDurationMinutes
+    );
+
+    if (missingActDuration) {
+      setAutomaticRunningOrderMessage(
+        t(
+          locale,
+          `Renseigne la durée du set de ${missingActDuration.name}.`,
+          `Fill in the set duration for ${missingActDuration.name}.`
+        )
+      );
+      return;
+    }
+
+    try {
+      const runningOrder = buildAutomaticRunningOrder({
+        getInTime: automaticGetInTime,
+        eventStartTime: automaticEventStartTime,
+        headlinerName: workspaceName,
+        headlinerSetDurationMinutes: headlinerDuration,
+        localActs: show.localSupportActs,
+        labels: {
+          getIn: "Get in",
+          eventStart: t(locale, "Début de l'événement", "Event start"),
+          changeover: t(locale, "Changement de plateau", "Changeover"),
+          soundcheck: t(locale, "Balance", "Soundcheck"),
+          live: "Live"
+        }
+      });
+
+      patchShow({
+        runningOrder,
+        dayOfShowInfo: {
+          ...show.dayOfShowInfo,
+          doorsTime: automaticEventStartTime
+        }
+      });
+      setAutomaticRunningOrderMessage(
+        t(
+          locale,
+          "Planning généré : balances, changements de plateau et sets sont prêts pour la day sheet.",
+          "Schedule generated: soundchecks, changeovers, and sets are ready for the day sheet."
+        )
+      );
+    } catch {
+      setAutomaticRunningOrderMessage(
+        t(
+          locale,
+          "Vérifie les horaires et les durées de set avant de générer le planning.",
+          "Check times and set durations before generating the schedule."
+        )
+      );
+    }
   }
 
   function addGuestlistEntry() {
@@ -996,6 +1120,7 @@ export function ShowWorkspaceView({
           name: crmBand.company,
           role,
           fee: crmBand.defaultFee ?? null,
+          setDurationMinutes: null,
           crmContactId: crmBand.id
         }
       ]
@@ -1073,6 +1198,7 @@ export function ShowWorkspaceView({
           name: crmBand.company,
           role: newLocalBandRole,
           fee: normalizedFee,
+          setDurationMinutes: null,
           crmContactId: crmBand.id
         }
       ]
@@ -2141,7 +2267,7 @@ export function ShowWorkspaceView({
                   show.localSupportActs.map((act) => (
                     <div
                       key={act.id}
-                      className="grid gap-3 rounded-[22px] border border-white/8 bg-black/15 p-4 md:grid-cols-[1fr_160px_160px_auto]"
+                      className="grid gap-3 rounded-[22px] border border-white/8 bg-black/15 p-4 md:grid-cols-[1fr_140px_130px_130px_auto]"
                     >
                       <Input
                         value={act.name}
@@ -2209,6 +2335,26 @@ export function ShowWorkspaceView({
                           })
                         }
                         placeholder="150"
+                      />
+                      <Input
+                        type="number"
+                        min="1"
+                        value={act.setDurationMinutes ?? ""}
+                        onChange={(event) =>
+                          patchShow({
+                            localSupportActs: show.localSupportActs.map((entry) =>
+                              entry.id === act.id
+                                ? {
+                                    ...entry,
+                                    setDurationMinutes: parseOptionalInteger(
+                                      event.target.value
+                                    )
+                                  }
+                                : entry
+                            )
+                          })
+                        }
+                        placeholder={t(locale, "Set (min)", "Set (min)")}
                       />
                       <Button
                         type="button"
@@ -2961,6 +3107,153 @@ export function ShowWorkspaceView({
               <Plus className="h-4 w-4" />
               {t(locale, "Ajouter une ligne", "Add row")}
             </Button>
+          </div>
+
+          <div className="mt-5 rounded-[24px] border border-coral-400/20 bg-coral-400/[0.06] p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-medium text-mist-50">
+                  {t(locale, "Planning automatique", "Automatic schedule")}
+                </p>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-mist-300">
+                  {t(
+                    locale,
+                    "Get in, balances d'une heure en ordre tête d'affiche → support → opener, puis sets en ordre opener → support → tête d'affiche. Les changements de plateau durent toujours 15 min.",
+                    "Get-in, one-hour soundchecks in headliner → support → opener order, then sets in opener → support → headliner order. Changeovers always last 15 minutes."
+                  )}
+                </p>
+              </div>
+              <Badge tone="accent">15 min</Badge>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-xs uppercase tracking-[0.2em] text-mist-300">
+                  {t(locale, "Get in", "Get-in")}
+                </span>
+                <Input
+                  type="time"
+                  value={automaticGetInTime}
+                  onChange={(event) => {
+                    setAutomaticGetInTime(event.target.value);
+                    setAutomaticRunningOrderMessage(null);
+                  }}
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-xs uppercase tracking-[0.2em] text-mist-300">
+                  {t(locale, "Début de l'événement", "Event start")}
+                </span>
+                <Input
+                  type="time"
+                  value={automaticEventStartTime}
+                  onChange={(event) => {
+                    setAutomaticEventStartTime(event.target.value);
+                    setAutomaticRunningOrderMessage(null);
+                  }}
+                />
+                <span className="block text-xs text-mist-300">
+                  {t(
+                    locale,
+                    "Le set de l'opener commencera 30 min après.",
+                    "The opener set will start 30 minutes later."
+                  )}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <p className="text-xs uppercase tracking-[0.2em] text-mist-300">
+                {t(locale, "Groupes et temps de set", "Bands and set times")}
+              </p>
+              <div className="grid items-center gap-3 rounded-2xl border border-white/8 bg-black/15 p-3 sm:grid-cols-[1fr_140px_130px]">
+                <div>
+                  <p className="text-sm font-medium text-mist-50">{workspaceName}</p>
+                  <p className="text-xs text-mist-300">
+                    {t(locale, "Tête d'affiche", "Headliner")}
+                  </p>
+                </div>
+                <Badge tone="accent">{t(locale, "Tête d'affiche", "Headliner")}</Badge>
+                <Input
+                  type="number"
+                  min="1"
+                  value={automaticHeadlinerDuration}
+                  onChange={(event) => {
+                    setAutomaticHeadlinerDuration(event.target.value);
+                    setAutomaticRunningOrderMessage(null);
+                  }}
+                  placeholder={t(locale, "Set (min)", "Set (min)")}
+                />
+              </div>
+              {show.localSupportActs.map((act) => (
+                <div
+                  key={act.id}
+                  className="grid items-center gap-3 rounded-2xl border border-white/8 bg-black/15 p-3 sm:grid-cols-[1fr_140px_130px]"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-mist-50">{act.name}</p>
+                    <p className="text-xs text-mist-300">
+                      {act.role === "opener"
+                        ? t(locale, "Opener", "Opener")
+                        : act.role === "support"
+                          ? t(locale, "Support", "Support")
+                          : t(locale, "Autre groupe", "Other band")}
+                    </p>
+                  </div>
+                  <Badge>
+                    {act.role === "opener"
+                      ? t(locale, "Opener", "Opener")
+                      : act.role === "support"
+                        ? t(locale, "Support", "Support")
+                        : t(locale, "Autre", "Other")}
+                  </Badge>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={act.setDurationMinutes ?? ""}
+                    onChange={(event) => {
+                      patchShow({
+                        localSupportActs: show.localSupportActs.map((entry) =>
+                          entry.id === act.id
+                            ? {
+                                ...entry,
+                                setDurationMinutes: parseOptionalInteger(
+                                  event.target.value
+                                )
+                              }
+                            : entry
+                        )
+                      });
+                      setAutomaticRunningOrderMessage(null);
+                    }}
+                    placeholder={t(locale, "Set (min)", "Set (min)")}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button type="button" variant="primary" onClick={generateAutomaticRunningOrder}>
+                <RefreshCcw className="h-4 w-4" />
+                {show.runningOrder.length
+                  ? t(locale, "Regénérer le planning", "Regenerate schedule")
+                  : t(locale, "Générer le planning", "Generate schedule")}
+              </Button>
+              {show.runningOrder.length ? (
+                <p className="text-xs text-mist-300">
+                  {t(
+                    locale,
+                    "La génération remplace le running order actuel.",
+                    "Generation replaces the current running order."
+                  )}
+                </p>
+              ) : null}
+            </div>
+            {automaticRunningOrderMessage ? (
+              <p className="mt-3 text-sm text-coral-100">
+                {automaticRunningOrderMessage}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-5 space-y-3">

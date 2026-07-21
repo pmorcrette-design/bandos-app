@@ -85,6 +85,15 @@ type BandosUIState = BandosWorkspaceData & {
     address: string;
     currency: SupportedCurrency;
   }) => string;
+  addTourShowFolder: (payload: {
+    tourName: string;
+    venue: string;
+    date: string;
+    city: string;
+    country: string;
+    address: string;
+    currency: SupportedCurrency;
+  }) => string;
   updateImportedTourCurrency: (
     tourName: string,
     currency: SupportedCurrency
@@ -478,6 +487,7 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
         nextFolders.push({
           id: `imported-show-${importKey}`,
           importKey,
+          source: "import",
           isStandalone: false,
           tourName,
           folderName: stop.venue,
@@ -547,7 +557,7 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
           return true;
         }
 
-        return activeKeys.has(folder.importKey);
+        return folder.source === "manual" || activeKeys.has(folder.importKey);
       });
 
       filtered.sort((left, right) => {
@@ -581,6 +591,7 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
         normalizeImportedShowFolder({
           id: folderId,
           importKey: folderId,
+          source: "manual",
           isStandalone: true,
           tourName: "Date unique",
           folderName: payload.venue,
@@ -649,6 +660,94 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
 
     return folderId;
   },
+  addTourShowFolder: (payload) => {
+    const folderId = buildClientEntityId("tour-show");
+    const now = new Date().toISOString();
+
+    set((state) => {
+      const nextImportOrder = state.importedShowFolders.reduce(
+        (maximum, folder) =>
+          folder.tourName === payload.tourName && !folder.isStandalone
+            ? Math.max(maximum, folder.importOrder + 1)
+            : maximum,
+        0
+      );
+
+      return {
+        importedShowFolders: sortImportedShowFolders([
+          normalizeImportedShowFolder({
+            id: folderId,
+            importKey: `manual-show-${folderId}`,
+            source: "manual",
+            isStandalone: false,
+            tourName: payload.tourName,
+            folderName: payload.venue,
+            date: payload.date,
+            venue: payload.venue,
+            city: payload.city,
+            country: payload.country,
+            address: payload.address,
+            tourCurrency: normalizeCurrency(payload.currency),
+            capacity: null,
+            ticketPrice: null,
+            showFee: null,
+            roomHire: null,
+            soundEngineerId: null,
+            soundEngineerCost: null,
+            localSupportActs: [],
+            localBandCount: 0,
+            localBandFeePerBand: null,
+            validated: false,
+            status: "pending",
+            notes: "",
+            runningOrder: [],
+            guestlistEntries: [],
+            guestlistCapacity: null,
+            guestlistCheckInMode: false,
+            venueContacts: [],
+            dayOfShowInfo: {
+              doorsTime: "",
+              settlementTime: "",
+              wifi: "",
+              parkingInfo: "",
+              hospitalityInfo: "",
+              dressingRoomInfo: "",
+              notes: ""
+            },
+            posterOverride: null,
+            daySheetNotes: "",
+            merchSetup: {
+              sellerName: "",
+              tableLocation: "",
+              cutPercent: null,
+              powerRequired: false,
+              stockNotes: ""
+            },
+            travelInfo: {
+              departureTime: "",
+              arrivalTime: "",
+              travelNotes: "",
+              hotelName: "",
+              hotelAddress: "",
+              hotelRooms: "",
+              hotelCheckIn: "",
+              hotelCheckOut: "",
+              borderNotes: ""
+            },
+            setlistEntries: [],
+            gearChecklistItems: [],
+            ticketingEventId: null,
+            importOrder: nextImportOrder,
+            createdAt: now,
+            updatedAt: now
+          }),
+          ...state.importedShowFolders
+        ])
+      };
+    });
+
+    return folderId;
+  },
   updateImportedTourCurrency: (tourName, currency) =>
     set((state) => ({
       importedShowFolders: sortImportedShowFolders(
@@ -696,11 +795,14 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
               ? {
                   ...folder,
                   tourName: resolvedTourName,
-                  importKey: buildImportKey(resolvedTourName, {
-                    date: folder.date,
-                    venue: folder.venue,
-                    city: folder.city
-                  }),
+                  importKey:
+                    folder.source === "manual"
+                      ? folder.importKey
+                      : buildImportKey(resolvedTourName, {
+                          date: folder.date,
+                          venue: folder.venue,
+                          city: folder.city
+                        }),
                   updatedAt: new Date().toISOString()
                 }
               : folder
@@ -713,11 +815,14 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
               ? normalizeImportedShowFolder({
                   ...folder,
                   tourName: resolvedTourName,
-                  importKey: buildImportKey(resolvedTourName, {
-                    date: folder.date,
-                    venue: folder.venue,
-                    city: folder.city
-                  }),
+                  importKey:
+                    folder.source === "manual"
+                      ? folder.importKey
+                      : buildImportKey(resolvedTourName, {
+                          date: folder.date,
+                          venue: folder.venue,
+                          city: folder.city
+                        }),
                   updatedAt: new Date().toISOString()
                 })
               : folder
@@ -766,7 +871,7 @@ export const useBandosUIStore = create<BandosUIState>()((set, get) => ({
                     typeof patch.address === "string"
                       ? patch.address.trim()
                       : folder.address,
-                  importKey: folder.isStandalone
+                  importKey: folder.isStandalone || folder.source === "manual"
                     ? folder.importKey
                     : buildImportKey(folder.tourName, {
                         date: nextDate,

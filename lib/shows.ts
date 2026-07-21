@@ -1,5 +1,6 @@
 import type { Show } from "@/lib/mock-data";
 import type {
+  ImportedLocalAct,
   ShowGearChecklistItem,
   ShowSetlistEntry,
   ImportedShowFolder,
@@ -85,7 +86,215 @@ function parseClockMinutes(value: string) {
     return null;
   }
 
-  return Number(match[1]) * 60 + Number(match[2]);
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (hours > 23 || minutes > 59) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function formatClockMinutes(value: number) {
+  const normalized = ((value % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+export type AutomaticRunningOrderInput = {
+  getInTime: string;
+  eventStartTime: string;
+  headlinerName: string;
+  headlinerSetDurationMinutes: number;
+  localActs: Array<
+    Pick<ImportedLocalAct, "id" | "name" | "role" | "setDurationMinutes">
+  >;
+  labels?: {
+    getIn?: string;
+    eventStart?: string;
+    changeover?: string;
+    soundcheck?: string;
+    live?: string;
+  };
+};
+
+const automaticRolePriority: Record<ImportedLocalAct["role"], number> = {
+  opener: 0,
+  other: 1,
+  support: 2
+};
+
+/**
+ * Builds the complete day schedule from the lineup. Soundchecks run in reverse
+ * stage order; live sets run opener-to-headliner with 15-minute changeovers.
+ */
+export function buildAutomaticRunningOrder({
+  getInTime,
+  eventStartTime,
+  headlinerName,
+  headlinerSetDurationMinutes,
+  localActs,
+  labels
+}: AutomaticRunningOrderInput): ShowRunningOrderEntry[] {
+  const getInMinutes = parseClockMinutes(getInTime);
+  const eventStartMinutes = parseClockMinutes(eventStartTime);
+  const normalizedHeadlinerDuration = Math.floor(headlinerSetDurationMinutes);
+
+  if (
+    getInMinutes === null ||
+    eventStartMinutes === null ||
+    getInMinutes < 0 ||
+    getInMinutes >= 1440 ||
+    eventStartMinutes < 0 ||
+    eventStartMinutes >= 1440
+  ) {
+    throw new Error("invalid-time");
+  }
+
+  if (normalizedHeadlinerDuration <= 0) {
+    throw new Error("missing-headliner-duration");
+  }
+
+  const liveActs = localActs
+    .map((act, index) => ({ ...act, index }))
+    .sort(
+      (left, right) =>
+        automaticRolePriority[left.role] - automaticRolePriority[right.role] ||
+        left.index - right.index
+    );
+  const missingDurationAct = liveActs.find(
+    (act) => !act.setDurationMinutes || act.setDurationMinutes <= 0
+  );
+
+  if (missingDurationAct) {
+    throw new Error(`missing-act-duration:${missingDurationAct.name}`);
+  }
+
+  const text = {
+    getIn: labels?.getIn || "Get in",
+    eventStart: labels?.eventStart || "Event start",
+    changeover: labels?.changeover || "Changeover",
+    soundcheck: labels?.soundcheck || "Soundcheck",
+    live: labels?.live || "Live"
+  };
+  let sequence = 0;
+  const entries: ShowRunningOrderEntry[] = [];
+  const pushTimedEntry = ({
+    artistName,
+    type,
+    start,
+    duration,
+    notes
+  }: {
+    artistName: string;
+    type: ShowRunningOrderEntry["type"];
+    start: number;
+    duration: number;
+    notes: string;
+  }) => {
+    sequence += 1;
+    entries.push({
+      id: `automatic-running-order-${sequence}`,
+      artistName,
+      type,
+      startTime: formatClockMinutes(start),
+      endTime: formatClockMinutes(start + duration),
+      durationMinutes: duration,
+      notes
+    });
+  };
+
+  pushTimedEntry({
+    artistName: text.getIn,
+    type: "load-in",
+    start: getInMinutes,
+    duration: 60,
+    notes: ""
+  });
+
+  const soundcheckActs = [
+    { id: "headliner", name: headlinerName, role: "headliner" as const },
+    ...[...liveActs].reverse()
+  ];
+  let soundcheckCursor = getInMinutes + 60;
+
+  soundcheckActs.forEach((act, index) => {
+    pushTimedEntry({
+      artistName: act.name,
+      type: "soundcheck",
+      start: soundcheckCursor,
+      duration: 60,
+      notes: text.soundcheck
+    });
+    soundcheckCursor += 60;
+
+    if (index < soundcheckActs.length - 1) {
+      pushTimedEntry({
+        artistName: text.changeover,
+        type: "changeover",
+        start: soundcheckCursor,
+        duration: 15,
+        notes: text.soundcheck
+      });
+      soundcheckCursor += 15;
+    }
+  });
+
+  entries.push({
+    id: `automatic-running-order-${++sequence}`,
+    artistName: text.eventStart,
+    type: "doors",
+    startTime: formatClockMinutes(eventStartMinutes),
+    endTime: "",
+    durationMinutes: null,
+    notes: ""
+  });
+
+  const liveLineup = [
+    ...liveActs.map((act) => ({
+      name: act.name,
+      type:
+        act.role === "opener"
+          ? ("opener" as const)
+          : act.role === "support"
+            ? ("support" as const)
+            : ("local support" as const),
+      duration: act.setDurationMinutes as number
+    })),
+    {
+      name: headlinerName,
+      type: "headliner" as const,
+      duration: normalizedHeadlinerDuration
+    }
+  ];
+  let liveCursor = eventStartMinutes + 30;
+
+  liveLineup.forEach((act, index) => {
+    pushTimedEntry({
+      artistName: act.name,
+      type: act.type,
+      start: liveCursor,
+      duration: act.duration,
+      notes: text.live
+    });
+    liveCursor += act.duration;
+
+    if (index < liveLineup.length - 1) {
+      pushTimedEntry({
+        artistName: text.changeover,
+        type: "changeover",
+        start: liveCursor,
+        duration: 15,
+        notes: text.live
+      });
+      liveCursor += 15;
+    }
+  });
+
+  return entries;
 }
 
 export function getImportedShowNightCosts(

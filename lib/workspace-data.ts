@@ -23,11 +23,13 @@ export type ImportedLocalAct = {
   name: string;
   role: "opener" | "support" | "other";
   fee: number | null;
+  setDurationMinutes: number | null;
   crmContactId: string | null;
 };
 
 export type RunningOrderEntryType =
   | "headliner"
+  | "opener"
   | "support"
   | "local support"
   | "changeover"
@@ -133,6 +135,7 @@ export type ShowGearChecklistItem = {
 export type ImportedShowFolder = {
   id: string;
   importKey: string;
+  source: "import" | "manual";
   isStandalone: boolean;
   tourName: string;
   folderName: string;
@@ -486,6 +489,10 @@ export function normalizeImportedLocalAct(
         ? act.role
         : "other",
     fee: typeof act.fee === "number" ? act.fee : null,
+    setDurationMinutes:
+      typeof act.setDurationMinutes === "number" && act.setDurationMinutes > 0
+        ? Math.floor(act.setDurationMinutes)
+        : null,
     crmContactId: act.crmContactId?.trim() || null
   };
 }
@@ -493,6 +500,7 @@ export function normalizeImportedLocalAct(
 function normalizeRunningOrderType(value?: string | null): RunningOrderEntryType {
   switch (value) {
     case "headliner":
+    case "opener":
     case "support":
     case "local support":
     case "changeover":
@@ -698,7 +706,8 @@ function buildLegacyLocalSupportActs(folder: Partial<ImportedShowFolder>) {
             ? "Support"
             : `Local band ${index + 1}`,
       role: index === 0 ? "opener" : index === 1 ? "support" : "other",
-      fee
+      fee,
+      setDurationMinutes: null
     })
   );
 }
@@ -719,6 +728,8 @@ export function normalizeImportedShowFolder(
   return {
     id: folder.id,
     importKey: folder.importKey ?? folder.id,
+    source:
+      folder.source === "manual" || folder.isStandalone ? "manual" : "import",
     isStandalone: Boolean(folder.isStandalone),
     tourName: folder.tourName ?? "Imported tour",
     folderName: folder.folderName ?? folder.venue ?? "Imported show",

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:open-meteo": "rm -rf .tmp-open-meteo-tests && ./node_modules/.bin/tsc --project tests/tsconfig.open-meteo.json && node --test .tmp-open-meteo-tests/tests/open-meteo.test.js",
+    "test:running-order": "rm -rf .tmp-running-order-tests && ./node_modules/.bin/tsc --project tests/tsconfig.running-order.json && node --test .tmp-running-order-tests/tests/running-order.test.js",
     "test:merch-forecast": "rm -rf .tmp-tests && ./node_modules/.bin/tsc --module commonjs --moduleResolution node --target ES2022 --outDir .tmp-tests tests/merch-forecast.test.ts lib/merch-forecast.ts lib/mock-data.ts lib/utils.ts && node --test .tmp-tests/tests/merch-forecast.test.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"

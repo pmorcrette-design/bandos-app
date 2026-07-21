@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "outDir": "../.tmp-running-order-tests",
+    "rootDir": "..",
+    "incremental": false,
+    "noEmit": false
+  },
+  "include": ["running-order.test.ts", "../lib/shows.ts"]
+}

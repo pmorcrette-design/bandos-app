@@ -112,6 +112,8 @@ function formatRunningOrderType(locale: Locale, type: ShowRunningOrderEntry["typ
   switch (type) {
     case "headliner":
       return t(locale, "Tete d'affiche", "Headliner");
+    case "opener":
+      return t(locale, "Opener", "Opener");
     case "support":
       return t(locale, "Support", "Support");
     case "local support":
